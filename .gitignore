@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+.next/
+out/
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+
+# Misc
+.DS_Store
+*.pem
+.env
+.env.local
+.env*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Worktrees
+.worktrees/
+
+# Skills (reinstall via: npx skills add nextlevelbuilder/ui-ux-pro-max-skill -y)
+.agents/
+.claude/skills/
+skills/
+skills-lock.json

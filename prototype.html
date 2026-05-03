@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PaperTune — 论文降重助手</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          50:  '#f0f4f8',
+          100: '#d9e2ec',
+          200: '#bcccdc',
+          300: '#8da8c4',
+          400: '#5d83a8',
+          500: '#3d668c',
+          600: '#1E3A5F',
+          700: '#192e4d',
+          800: '#13233c',
+          900: '#0d1829',
+        },
+        accent: {
+          50:  '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
+        },
+      },
+      fontFamily: {
+        display: ['"Crimson Pro"', 'Georgia', 'serif'],
+        body: ['"Atkinson Hyperlegible"', 'system-ui', 'sans-serif'],
+      },
+    }
+  }
+}
+</script>
+<style>
+  * { font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; }
+  h1, h2, h3, h4, .font-display { font-family: 'Crimson Pro', Georgia, serif; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .nav-link { transition: color 0.2s, background-color 0.2s; }
+  .nav-link.active { color: #1E3A5F; background-color: #f0f4f8; }
+  .file-drop { transition: all 0.2s ease; }
+  .file-drop.drag-over { border-color: #1E3A5F; background-color: #f0f4f8; transform: scale(1.01); }
+  .card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+  .diff-highlight { background: #fef3c7; border-bottom: 2px solid #d97706; padding: 0 1px; border-radius: 1px; }
+  .diff-added { background: #d1fae5; border-bottom: 2px solid #059669; padding: 0 1px; border-radius: 1px; }
+  .zwnj-mark { background: #ede9fe; border-bottom: 1px dashed #7c3aed; padding: 0 2px; font-size: 0.85em; color: #7c3aed; }
+  .pulse-dot { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .fade-in { animation: fadeIn 0.4s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-up { animation: slideUp 0.35s ease-out; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .toast-enter { animation: toastIn 0.25s ease-out; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .progress-bar { transition: width 0.35s ease; }
+  .radio-card { transition: all 0.2s ease; cursor: pointer; }
+  .radio-card:hover { border-color: #8da8c4; }
+  .radio-card:has(input:checked) { border-color: #1E3A5F; background-color: #f0f4f8; }
+  .btn-primary { transition: all 0.2s ease; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(30,58,95,0.2); }
+  .btn-primary:active { transform: translateY(0); }
+</style>
+</head>
+<body class="bg-[#F8FAFC] text-[#0F172A] min-h-screen antialiased">
+
+<!-- ====== NAVIGATION ====== -->
+<nav class="bg-white/80 backdrop-blur-md border-b border-[#E4E7EB] sticky top-0 z-50">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-14 items-center">
+      <a href="#" onclick="showPage('home')" class="text-xl font-bold text-brand-600 tracking-tight font-display">
+        PaperTune
+      </a>
+      <div class="hidden sm:flex items-center gap-1">
+        <button onclick="showPage('home')" id="nav-home" class="nav-link active px-3 py-2 rounded-lg text-sm font-medium text-[#334155]">首页</button>
+        <button onclick="showPage('process')" id="nav-process" class="nav-link px-3 py-2 rounded-lg text-sm font-medium text-[#334155]">智能处理</button>
+        <button onclick="showPage('services')" id="nav-services" class="nav-link px-3 py-2 rounded-lg text-sm font-medium text-[#334155]">查重平台</button>
+      </div>
+      <span class="text-xs font-medium text-accent-700 bg-accent-50 px-3 py-1 rounded-full">免费使用</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ====== TOAST ====== -->
+<div id="toast" class="hidden fixed top-16 right-4 sm:right-6 z-[100] bg-[#0F172A] text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium toast-enter"></div>
+
+<!-- ================================================================================== -->
+<!--  PAGE 1: HOME                                                                      -->
+<!-- ================================================================================== -->
+<div id="page-home" class="page active">
+
+  <!-- Hero -->
+  <section class="max-w-4xl mx-auto px-4 pt-16 sm:pt-24 pb-12 text-center">
+    <div class="inline-flex items-center gap-2 bg-accent-50 text-accent-700 text-xs font-medium px-3 py-1 rounded-full mb-6">
+      <span class="w-1.5 h-1.5 bg-green-500 rounded-full pulse-dot"></span> 当前完全免费开放
+    </div>
+    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#0F172A] tracking-tight leading-tight font-display">
+      论文<span class="text-brand-600">降重</span>与<span class="text-brand-600">降 AI 率</span><br class="hidden sm:block">一站式解决方案
+    </h1>
+    <p class="mt-5 text-base sm:text-lg text-[#475569] max-w-xl mx-auto leading-relaxed">
+      上传 <span class="font-medium text-brand-600">.docx</span> 格式论文，智能识别高重复段落，<br class="hidden sm:block">规则引擎精准改写，保留学术风格的同时有效降低查重率。
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <button onclick="showPage('process')" class="btn-primary w-full sm:w-auto px-6 py-3.5 bg-brand-600 text-white rounded-2xl font-semibold text-base shadow-md">
+        立即上传论文
+      </button>
+      <button onclick="document.getElementById('how-it-works').scrollIntoView({behavior:'smooth'})" class="w-full sm:w-auto px-6 py-3.5 bg-white text-[#334155] rounded-2xl font-semibold text-base border border-[#E4E7EB] hover:border-brand-300 hover:text-brand-600 transition-colors">
+        了解更多
+      </button>
+    </div>
+    <div class="mt-6 flex items-center justify-center gap-5 text-xs text-[#64748B]">
+      <span class="flex items-center gap-1.5">
+        <svg class="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        支持 .docx
+      </span>
+      <span class="flex items-center gap-1.5">
+        <svg class="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        最大 20MB
+      </span>
+      <span class="flex items-center gap-1.5">
+        <svg class="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        本地处理
+      </span>
+    </div>
+  </section>
+
+  <!-- Preview Window -->
+  <section class="max-w-4xl mx-auto px-4 pb-16">
+    <div class="bg-white rounded-2xl border border-[#E4E7EB] shadow-sm overflow-hidden">
+      <div class="bg-[#F8FAFC] border-b border-[#E4E7EB] px-4 py-2.5 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+        <span class="ml-2 text-xs text-[#64748B]">毕业论文_初稿.docx — 处理结果预览</span>
+      </div>
+      <div class="grid md:grid-cols-2 divide-x divide-[#E4E7EB]">
+        <div class="p-5 sm:p-6">
+          <p class="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">原文</p>
+          <p class="text-sm text-[#334155] leading-relaxed">
+            随着互联网技术的快速发展，电子商务已经成为了现代商业活动中最<span class="diff-highlight">重要</span>的组成部分之一。<span class="diff-highlight">首先</span>，电子商务<span class="diff-highlight">不仅</span>改变了传统的交易方式，<span class="diff-highlight">而且</span>对消费者的购买行为<span class="diff-highlight">产生了深远的影响</span>。
+          </p>
+          <p class="text-xs text-[#DC2626] mt-3 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+            AI 检出风险：<span class="font-semibold">高</span>
+          </p>
+        </div>
+        <div class="p-5 sm:p-6 bg-brand-50/30">
+          <p class="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-3">降重 + 降 AI 后</p>
+          <p class="text-sm text-[#0F172A] leading-relaxed">
+            伴随网络技术的快速演进，电商已经变成当代商业活动的<span class="diff-added">关键</span>组成环节。<span class="diff-added">在初始阶段</span>，电子商务<span class="diff-added"></span>改变了传统交易模式，<span class="diff-added">更</span>对消费者的购物行为<span class="diff-added">发挥了显著作用</span>。
+          </p>
+          <p class="text-xs text-accent-600 mt-3 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            AI 检出风险：<span class="font-semibold">低</span>
+          </p>
+        </div>
+      </div>
+      <!-- Chart -->
+      <div class="border-t border-[#E4E7EB]">
+        <div class="grid md:grid-cols-2 divide-x divide-[#E4E7EB]">
+          <!-- 查重率 Chart -->
+          <div class="p-5 sm:p-6">
+            <p class="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-4">查重率对比</p>
+            <div class="space-y-4">
+              <div class="flex items-end gap-3">
+                <span class="text-xs text-[#94A3B8] w-8 shrink-0">处理前</span>
+                <div class="flex-1 bg-red-100 rounded-full h-7 relative overflow-hidden">
+                  <div class="bg-red-500 h-full rounded-full flex items-center justify-end pr-2" style="width:72%">
+                    <span class="text-xs font-bold text-white">72%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-end gap-3">
+                <span class="text-xs text-[#94A3B8] w-8 shrink-0">处理后</span>
+                <div class="flex-1 bg-accent-100 rounded-full h-7 relative overflow-hidden">
+                  <div class="bg-accent-500 h-full rounded-full flex items-center justify-end pr-2" style="width:18%">
+                    <span class="text-xs font-bold text-white">18%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-accent-600 font-medium">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                降低 54%
+              </div>
+            </div>
+          </div>
+          <!-- AI 率 Chart -->
+          <div class="p-5 sm:p-6">
+            <p class="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-4">AI 检出率对比</p>
+            <div class="space-y-4">
+              <div class="flex items-end gap-3">
+                <span class="text-xs text-[#94A3B8] w-8 shrink-0">处理前</span>
+                <div class="flex-1 bg-orange-100 rounded-full h-7 relative overflow-hidden">
+                  <div class="bg-orange-500 h-full rounded-full flex items-center justify-end pr-2" style="width:78%">
+                    <span class="text-xs font-bold text-white">78%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-end gap-3">
+                <span class="text-xs text-[#94A3B8] w-8 shrink-0">处理后</span>
+                <div class="flex-1 bg-blue-100 rounded-full h-7 relative overflow-hidden">
+                  <div class="bg-blue-500 h-full rounded-full flex items-center justify-end pr-2" style="width:22%">
+                    <span class="text-xs font-bold text-white">22%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-blue-600 font-medium">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                降低 56%
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="max-w-5xl mx-auto px-4 pb-20">
+    <h2 class="text-2xl sm:text-3xl font-bold text-center text-[#0F172A] mb-3 font-display">三大核心能力</h2>
+    <p class="text-center text-[#64748B] mb-10 text-sm">从降重到降 AI，覆盖论文查重全场景</p>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- Feature 1 -->
+      <div class="card bg-white rounded-2xl p-6 border border-[#E4E7EB] shadow-sm">
+        <div class="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </div>
+        <h3 class="text-base font-bold text-[#0F172A] mb-2 font-display">智能降重引擎</h3>
+        <p class="text-sm text-[#475569] leading-relaxed mb-4">规则引擎驱动：同义词替换 · 句式重组 · 语序调整，层层递进降低重复率</p>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">同义词库</span>
+          <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">句法模板</span>
+          <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">零宽不连词</span>
+        </div>
+      </div>
+      <!-- Feature 2 -->
+      <div class="card bg-white rounded-2xl p-6 border border-[#E4E7EB] shadow-sm">
+        <div class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        </div>
+        <h3 class="text-base font-bold text-[#0F172A] mb-2 font-display">AI 痕迹消除</h3>
+        <p class="text-sm text-[#475569] leading-relaxed mb-4">句长随机化 · 连接词多样化 · AI 典型用语替换，让文本更具人类写作特征</p>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">句长波动</span>
+          <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">AI 模式识别</span>
+          <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">困惑度调节</span>
+        </div>
+      </div>
+      <!-- Feature 3 -->
+      <div class="card bg-white rounded-2xl p-6 border border-[#E4E7EB] shadow-sm">
+        <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        </div>
+        <h3 class="text-base font-bold text-[#0F172A] mb-2 font-display">查重平台导航</h3>
+        <p class="text-sm text-[#475569] leading-relaxed mb-4">聚合知网、维普、万方、Turnitin 等主流平台，一目了然的对比与入口</p>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">8 大平台</span>
+          <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">价格对比</span>
+          <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">适用场景</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it Works -->
+  <section id="how-it-works" class="border-t border-[#E4E7EB] bg-white">
+    <div class="max-w-4xl mx-auto px-4 py-16 sm:py-20">
+      <h2 class="text-2xl sm:text-3xl font-bold text-center text-[#0F172A] mb-12 font-display">三步完成降重</h2>
+      <div class="grid sm:grid-cols-3 gap-8">
+        <div class="text-center">
+          <div class="w-14 h-14 bg-brand-50 text-brand-700 rounded-2xl flex items-center justify-center text-xl font-bold mx-auto mb-4 font-display">1</div>
+          <h4 class="font-semibold text-[#0F172A] mb-1.5">上传论文</h4>
+          <p class="text-sm text-[#64748B]">拖拽或点击上传 .docx 文件<br>系统自动解析段落结构</p>
+        </div>
+        <div class="text-center">
+          <div class="w-14 h-14 bg-brand-50 text-brand-700 rounded-2xl flex items-center justify-center text-xl font-bold mx-auto mb-4 font-display">2</div>
+          <h4 class="font-semibold text-[#0F172A] mb-1.5">选择策略</h4>
+          <p class="text-sm text-[#64748B]">选择降重强度和处理模式<br>一键智能改写全文</p>
+        </div>
+        <div class="text-center">
+          <div class="w-14 h-14 bg-brand-50 text-brand-700 rounded-2xl flex items-center justify-center text-xl font-bold mx-auto mb-4 font-display">3</div>
+          <h4 class="font-semibold text-[#0F172A] mb-1.5">导出结果</h4>
+          <p class="text-sm text-[#64748B]">预览改写效果<br>下载处理后的 .docx 或对照版</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-[#E4E7EB] bg-white">
+    <div class="max-w-5xl mx-auto px-4 py-8 text-center text-xs text-[#94A3B8]">
+      PaperTune · 论文降重助手 · 仅供学术辅助使用，不保证通过任何特定查重系统
+    </div>
+  </footer>
+</div>
+
+<!-- ================================================================================== -->
+<!--  PAGE 2: PROCESS                                                                   -->
+<!-- ================================================================================== -->
+<div id="page-process" class="page">
+
+  <div class="max-w-5xl mx-auto px-4 py-8">
+    <!-- Top bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8 fade-in">
+      <div>
+        <h1 class="text-2xl font-bold text-[#0F172A] font-display">智能处理</h1>
+        <p class="text-sm text-[#64748B] mt-0.5">上传论文，选择策略，一键改写</p>
+      </div>
+      <button onclick="goHomeWithReset()" class="px-4 py-2 text-sm font-medium text-[#475569] bg-white border border-[#E4E7EB] rounded-xl hover:bg-[#F1F3F5] transition-colors">
+        返回首页
+      </button>
+    </div>
+
+    <!-- Step 1: Upload -->
+    <div id="upload-section" class="fade-in">
+      <div class="max-w-xl mx-auto">
+        <div id="file-drop-zone" class="file-drop bg-white border-2 border-dashed border-[#bcccdc] rounded-3xl p-14 sm:p-16 text-center cursor-pointer hover:border-brand-400 transition-colors">
+          <div class="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <svg class="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold text-[#0F172A] mb-1.5 font-display">拖拽论文文件到此处</h3>
+          <p class="text-sm text-[#64748B] mb-5">或点击选择文件 · 仅支持 .docx · 最大 20MB</p>
+          <label class="btn-primary inline-block px-5 py-3 bg-brand-600 text-white rounded-xl font-medium text-sm cursor-pointer shadow-md">
+            选择文件
+            <input type="file" accept=".docx" class="hidden" onchange="handleFileSelect(this)">
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Strategy -->
+    <div id="strategy-section" class="hidden">
+      <div class="bg-white rounded-2xl border border-[#E4E7EB] p-5 mb-6 slide-up flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-accent-50 text-accent-600 rounded-xl flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          </div>
+          <div>
+            <p class="font-semibold text-[#0F172A] text-sm" id="uploaded-filename">论文.docx</p>
+            <p class="text-xs text-[#64748B]" id="uploaded-stats"></p>
+          </div>
+        </div>
+        <button onclick="resetUpload()" class="text-xs text-[#94A3B8] hover:text-red-500 transition-colors self-start sm:self-center">重新上传</button>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Controls -->
+        <div class="lg:col-span-1 space-y-5">
+          <!-- Mode -->
+          <div class="bg-white rounded-2xl border border-[#E4E7EB] p-5 slide-up">
+            <h4 class="font-semibold text-[#0F172A] mb-3 font-display text-sm">处理模式</h4>
+            <div class="space-y-2">
+              <label class="radio-card flex items-center gap-3 p-3 rounded-xl border border-brand-200 bg-brand-50/50">
+                <input type="radio" name="task_type" value="both" checked class="accent-brand-600 w-4 h-4">
+                <div><div class="text-sm font-medium text-[#0F172A]">综合处理</div><div class="text-xs text-[#64748B]">降重 + 降 AI 率</div></div>
+              </label>
+              <label class="radio-card flex items-center gap-3 p-3 rounded-xl border border-[#E4E7EB]">
+                <input type="radio" name="task_type" value="rewrite" class="accent-brand-600 w-4 h-4">
+                <div><div class="text-sm font-medium text-[#0F172A]">仅降重</div><div class="text-xs text-[#64748B]">同义词替换 + 句式变换</div></div>
+              </label>
+              <label class="radio-card flex items-center gap-3 p-3 rounded-xl border border-[#E4E7EB]">
+                <input type="radio" name="task_type" value="de_ai" class="accent-brand-600 w-4 h-4">
+                <div><div class="text-sm font-medium text-[#0F172A]">仅降 AI 率</div><div class="text-xs text-[#64748B]">消除 AI 写作痕迹</div></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Intensity -->
+          <div class="bg-white rounded-2xl border border-[#E4E7EB] p-5 slide-up" style="animation-delay: 0.05s">
+            <h4 class="font-semibold text-[#0F172A] mb-3 font-display text-sm">降重强度</h4>
+            <div class="space-y-2">
+              <label class="radio-card flex items-center justify-between p-3 rounded-xl border border-[#E4E7EB]">
+                <div class="flex items-center gap-3">
+                  <input type="radio" name="intensity" value="light" class="accent-brand-600 w-4 h-4">
+                  <div><div class="text-sm font-medium text-[#0F172A]">轻度</div><div class="text-xs text-[#64748B]">保守改写，语义保真度高</div></div>
+                </div>
+                <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">~15% 替换</span>
+              </label>
+              <label class="radio-card flex items-center justify-between p-3 rounded-xl border border-brand-200 bg-brand-50/50">
+                <div class="flex items-center gap-3">
+                  <input type="radio" name="intensity" value="medium" checked class="accent-brand-600 w-4 h-4">
+                  <div><div class="text-sm font-medium text-[#0F172A]">中度 <span class="text-xs text-brand-600 font-normal">推荐</span></div><div class="text-xs text-[#64748B]">平衡改写，效果与保真兼顾</div></div>
+                </div>
+                <span class="text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md">~35% 替换</span>
+              </label>
+              <label class="radio-card flex items-center justify-between p-3 rounded-xl border border-[#E4E7EB]">
+                <div class="flex items-center gap-3">
+                  <input type="radio" name="intensity" value="deep" class="accent-brand-600 w-4 h-4">
+                  <div><div class="text-sm font-medium text-[#0F172A]">深度</div><div class="text-xs text-[#64748B]">大幅改写，降重效果最强</div></div>
+                </div>
+                <span class="text-xs text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded-md">~55% 替换</span>
+              </label>
+            </div>
+          </div>
+
+          <button onclick="startProcessing()" class="btn-primary w-full py-3.5 bg-brand-600 text-white rounded-2xl font-semibold text-base shadow-md">
+            开始智能处理
+          </button>
+        </div>
+
+        <!-- Preview -->
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-2xl border border-[#E4E7EB] overflow-hidden slide-up shadow-sm h-full">
+            <div class="bg-[#F8FAFC] border-b border-[#E4E7EB] px-4 py-2.5 flex items-center justify-between">
+              <span class="text-sm font-medium text-[#334155]">文档预览</span>
+              <span class="text-xs text-[#94A3B8]" id="preview-count"></span>
+            </div>
+            <div class="divide-y divide-[#F1F3F5] max-h-[500px] overflow-y-auto" id="paragraph-preview">
+              <div class="p-10 text-center text-[#94A3B8]">
+                <svg class="w-10 h-10 mx-auto mb-3 text-[#CBD5E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <p class="text-sm">上传文件后在此预览论文内容</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Results -->
+    <div id="results-section" class="hidden">
+      <!-- Progress -->
+      <div id="processing-bar" class="hidden bg-white rounded-2xl border border-[#E4E7EB] p-5 mb-6 slide-up shadow-sm">
+        <div class="flex items-center gap-4">
+          <div class="w-8 h-8 border-[3px] border-brand-200 border-t-brand-600 rounded-full animate-spin"></div>
+          <div>
+            <p class="font-medium text-[#0F172A] text-sm">正在处理中</p>
+            <p class="text-xs text-[#64748B]" id="progress-text">已处理 0 段</p>
+          </div>
+        </div>
+        <div class="mt-4 bg-[#F1F3F5] rounded-full h-1.5">
+          <div class="progress-bar bg-gradient-to-r from-brand-500 to-accent-500 h-1.5 rounded-full" id="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div id="stats-bar" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 slide-up">
+        <div class="bg-white rounded-xl p-4 text-center border border-[#E4E7EB] shadow-sm">
+          <p class="text-2xl font-bold text-brand-600 font-display" id="stat-paras">0</p>
+          <p class="text-xs text-[#64748B] mt-0.5">处理段落</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 text-center border border-[#E4E7EB] shadow-sm">
+          <p class="text-2xl font-bold text-accent-600 font-display" id="stat-chars">0</p>
+          <p class="text-xs text-[#64748B] mt-0.5">改写字数</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 text-center border border-[#E4E7EB] shadow-sm">
+          <p class="text-2xl font-bold text-red-500 font-display" id="stat-ai-before">-</p>
+          <p class="text-xs text-[#64748B] mt-0.5">处理前 AI 分</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 text-center border border-[#E4E7EB] shadow-sm">
+          <p class="text-2xl font-bold text-accent-500 font-display" id="stat-ai-after">-</p>
+          <p class="text-xs text-[#64748B] mt-0.5">处理后 AI 分</p>
+        </div>
+      </div>
+
+      <!-- Comparison -->
+      <div class="bg-white rounded-2xl border border-[#E4E7EB] overflow-hidden slide-up shadow-sm mb-6">
+        <div class="bg-[#F8FAFC] border-b border-[#E4E7EB] px-4 py-2.5 flex items-center justify-between">
+          <span class="text-sm font-medium text-[#334155]">逐段对比</span>
+          <div class="flex items-center gap-2">
+            <button onclick="exportDoc('single')" class="btn-primary px-4 py-1.5 bg-brand-600 text-white text-xs rounded-lg font-medium shadow-sm">导出改写版</button>
+            <button onclick="exportDoc('compare')" class="px-4 py-1.5 bg-white text-[#334155] text-xs rounded-lg font-medium border border-[#E4E7EB] hover:bg-[#F1F3F5] transition-colors">导出对照版</button>
+          </div>
+        </div>
+        <div class="divide-y divide-[#F1F3F5] max-h-[600px] overflow-y-auto" id="result-comparison"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================================== -->
+<!--  PAGE 3: CHECK SERVICES                                                            -->
+<!-- ================================================================================== -->
+<div id="page-services" class="page">
+
+  <div class="max-w-5xl mx-auto px-4 py-8 fade-in">
+    <div class="text-center mb-10">
+      <h1 class="text-2xl font-bold text-[#0F172A] font-display">查重平台导航</h1>
+      <p class="text-[#64748B] mt-1.5 text-sm">聚合主流查重平台，对比数据库覆盖、价格和适用场景</p>
+    </div>
+
+    <!-- Tip Banner -->
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-8 flex items-start gap-3">
+      <svg class="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div>
+        <p class="text-sm font-medium text-amber-800">使用建议</p>
+        <p class="text-xs text-amber-700 mt-0.5 leading-relaxed">各查重系统数据库不同，结果可能有差异。建议先用廉价系统自检，修改后使用学校指定系统终检。本工具仅提供降重辅助，不保证通过任何特定查重系统。</p>
+      </div>
+    </div>
+
+    <!-- Platform Cards -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="service-cards"></div>
+  </div>
+</div>
+
+<!-- ================================================================================== -->
+<!--  SCRIPTS                                                                           -->
+<!-- ================================================================================== -->
+<script>
+// ── NAVIGATION ──────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + name);
+  if (navEl) navEl.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── FILE UPLOAD ─────────────────────────────────────────
+const dropZone = document.getElementById('file-drop-zone');
+if (dropZone) {
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+}
+
+function handleFileSelect(input) { if (input.files.length) handleFile(input.files[0]); }
+
+function handleFile(file) {
+  if (!file.name.endsWith('.docx')) { showToast('仅支持 .docx 格式文件'); return; }
+  if (file.size > 20 * 1024 * 1024) { showToast('文件大小超过 20MB 限制'); return; }
+
+  document.getElementById('upload-section').classList.add('hidden');
+  document.getElementById('strategy-section').classList.remove('hidden');
+  document.getElementById('uploaded-filename').textContent = file.name;
+
+  const mockParas = [
+    '随着互联网技术的快速发展，电子商务已经成为了现代商业活动中最重要的组成部分之一。首先，电子商务不仅改变了传统的交易方式，而且对消费者的购买行为产生了深远的影响。',
+    '近年来，随着移动支付技术的不断成熟和普及，消费者的购物习惯发生了显著的变化。研究表明，移动支付的便捷性显著提高了消费者的购买意愿和购买频率。',
+    '本文通过对500名消费者的问卷调查发现，价格因素仍然是影响消费者在线购买决策的最主要因素，其次是商品质量和物流配送速度。因此，电商平台应当重视定价策略的优化。',
+    '此外，社交媒体的兴起为电子商务提供了新的营销渠道。许多研究表明，社交电商模式能够有效提升用户的购买转化率，尤其是在年轻消费群体中表现尤为突出。',
+    '综上所述，电子商务的发展受到技术进步、消费者行为变化和营销模式创新等多重因素的共同影响。未来的研究可以进一步探讨人工智能技术在电子商务中的应用前景。'
+  ];
+
+  document.getElementById('uploaded-stats').textContent = mockParas.length + ' 段 · ' + mockParas.reduce((s, p) => s + p.length, 0) + ' 字符';
+
+  const preview = document.getElementById('paragraph-preview');
+  preview.innerHTML = mockParas.map((p, i) =>
+    `<div class="px-4 py-3 hover:bg-[#F8FAFC] transition-colors">
+      <span class="text-xs text-[#94A3B8] font-medium mr-2">第 ${i+1} 段</span>
+      <span class="text-sm text-[#334155] leading-relaxed">${truncate(p, 110)}</span>
+    </div>`
+  ).join('');
+  document.getElementById('preview-count').textContent = mockParas.length + ' 段';
+
+  window._mockParas = mockParas;
+}
+
+function resetUpload() {
+  document.getElementById('strategy-section').classList.add('hidden');
+  document.getElementById('results-section').classList.add('hidden');
+  document.getElementById('upload-section').classList.remove('hidden');
+  document.getElementById('paragraph-preview').innerHTML = `<div class="p-10 text-center text-[#94A3B8]"><svg class="w-10 h-10 mx-auto mb-3 text-[#CBD5E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><p class="text-sm">上传文件后在此预览论文内容</p></div>`;
+  document.getElementById('preview-count').textContent = '';
+}
+
+function goHomeWithReset() { resetUpload(); showPage('home'); }
+
+// ── PROCESSING ──────────────────────────────────────────
+function startProcessing() {
+  const intensity = document.querySelector('input[name="intensity"]:checked').value;
+  const taskType = document.querySelector('input[name="task_type"]:checked').value;
+
+  document.getElementById('strategy-section').classList.add('hidden');
+  document.getElementById('results-section').classList.remove('hidden');
+  document.getElementById('processing-bar').classList.remove('hidden');
+  document.getElementById('stats-bar').classList.add('hidden');
+
+  const paras = window._mockParas || [];
+  const total = paras.length;
+  let current = 0;
+  const progressText = document.getElementById('progress-text');
+  const progressFill = document.getElementById('progress-fill');
+
+  const interval = setInterval(() => {
+    current++;
+    const pct = Math.round((current / total) * 100);
+    progressFill.style.width = pct + '%';
+    progressText.textContent = `已处理 ${current}/${total} 段`;
+    if (current >= total) { clearInterval(interval); setTimeout(() => showResults(intensity, taskType), 350); }
+  }, 280);
+}
+
+function showResults(intensity, taskType) {
+  document.getElementById('processing-bar').classList.add('hidden');
+  document.getElementById('stats-bar').classList.remove('hidden');
+
+  const originalParas = window._mockParas || [];
+  const rewrittenParas = originalParas.map(p => generateMockRewrite(p, intensity));
+
+  const aiBefore = randomInt(55, 85);
+  const aiAfter = intensity === 'deep' ? randomInt(15, 30) : intensity === 'medium' ? randomInt(20, 40) : randomInt(30, 50);
+
+  document.getElementById('stat-paras').textContent = rewrittenParas.length;
+  document.getElementById('stat-chars').textContent = rewrittenParas.reduce((s, p) => s + p.rewritten.length, 0);
+  document.getElementById('stat-ai-before').textContent = aiBefore;
+  document.getElementById('stat-ai-after').textContent = aiAfter;
+
+  const container = document.getElementById('result-comparison');
+  container.innerHTML = rewrittenParas.map((p, i) => `
+    <div class="px-4 py-4 hover:bg-[#F8FAFC] transition-colors">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-xs font-semibold text-[#94A3B8] bg-[#F1F3F5] px-2 py-0.5 rounded-md">第 ${i+1} 段</span>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="text-sm text-[#475569] leading-relaxed border-l-2 border-orange-200 pl-3">
+          <span class="text-xs text-orange-400 font-medium block mb-1">原文</span>
+          ${p.original}
+        </div>
+        <div class="text-sm text-[#0F172A] leading-relaxed border-l-2 border-accent-300 pl-3">
+          <span class="text-xs text-accent-500 font-medium block mb-1">改写</span>
+          ${p.rewritten}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  window._results = rewrittenParas;
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function generateMockRewrite(text, intensity) {
+  const reps = {
+    'light': [['重要','关键'],['显著','明显'],['影响','作用'],['研究','探讨'],['表明','显示']],
+    'medium': [['重要','核心'],['显著','突出'],['影响','制约'],['研究','系统分析'],['表明','揭示'],['提出','强调'],['首先','第一'],['因此','因而'],['此外','另外'],['不仅',''],['而且','更']],
+    'deep': [['重要','根本'],['显著','醒目'],['影响','左右'],['研究','系统考察'],['表明','印证'],['提出','阐明'],['首先','在初始阶段'],['因此','正因如此'],['此外','除此之外'],['综上所述','总体来看'],['发展','演进'],['改变','重塑']]
+  };
+  let result = text;
+  (reps[intensity] || reps['medium']).forEach(([from, to]) => { if (result.includes(from)) result = result.replace(from, to); });
+  if (intensity === 'deep') {
+    result = result.replace(/。/g, () => Math.random() < 0.3 ? '；' : '。');
+    if (Math.random() < 0.4) result = result.replace(/的/g, () => Math.random() < 0.15 ? '的‌' : '的');
+  }
+  return { original: text, rewritten: result };
+}
+
+// ── EXPORT ──────────────────────────────────────────────
+function exportDoc(mode) {
+  showToast(mode === 'compare' ? '正在生成对照版 .docx，即将下载...' : '正在生成改写版 .docx，即将下载...');
+  setTimeout(() => showToast('导出成功'), 2000);
+}
+
+// ── CHECK SERVICES ──────────────────────────────────────
+const services = [
+  { name:'知网查重 (CNKI)', url:'https://cx.cnki.net', desc:'国内高校通用检测系统，覆盖学术期刊、学位论文、会议论文等数据库', price:'约 100-300 元/篇', tags:['学术论文','学位论文'], color:'red' },
+  { name:'维普查重 (VIP)', url:'https://vpcs.cqvip.com', desc:'维普中文期刊检测系统，覆盖期刊论文和学位论文', price:'约 2 元/千字', tags:['期刊论文','学位论文'], color:'blue' },
+  { name:'万方检测', url:'http://check.wanfangdata.com.cn', desc:'万方数据论文相似性检测系统', price:'约 1.5 元/千字', tags:['学术论文','学位论文'], color:'indigo' },
+  { name:'PaperPass', url:'https://www.paperpass.com', desc:'专业论文检测平台，性价比高，适合初稿自检', price:'1.5 元/千字', tags:['初稿自检','性价比高'], color:'green' },
+  { name:'PaperYY', url:'https://www.paperyy.com', desc:'在线论文检测，提供免费检测额度', price:'免费额度 + 约 1 元/千字', tags:['免费额度','在线检测'], color:'teal' },
+  { name:'Turnitin', url:'https://www.turnitin.com', desc:'国际通用论文查重系统，广泛应用于海外高校', price:'按账号收费', tags:['英文论文','SCI 投稿'], color:'purple' },
+  { name:'大雅查重', url:'https://www.dayainfo.com', desc:'超星旗下查重平台，图书库资源丰富', price:'约 1.5 元/千字', tags:['图书库','学位论文'], color:'orange' },
+  { name:'笔杆网', url:'https://www.bigan.net', desc:'写作辅助 + 查重一体化平台', price:'按次收费', tags:['写作辅助','格式排版'], color:'gray' },
+];
+
+function renderServiceCards() {
+  const tagColorMap = {
+    red:'bg-red-50 text-red-600', blue:'bg-blue-50 text-blue-600', indigo:'bg-indigo-50 text-indigo-600',
+    green:'bg-green-50 text-green-600', teal:'bg-teal-50 text-teal-600', purple:'bg-purple-50 text-purple-600',
+    orange:'bg-orange-50 text-orange-600', gray:'bg-[#F1F3F5] text-[#475569]'
+  };
+  const btnStyles = {
+    red:    'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-red-200 shadow-lg',
+    blue:   'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-blue-200 shadow-lg',
+    indigo: 'bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-indigo-200 shadow-lg',
+    green:  'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-green-200 shadow-lg',
+    teal:   'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-teal-200 shadow-lg',
+    purple: 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-purple-200 shadow-lg',
+    orange: 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-orange-200 shadow-lg',
+    gray:   'bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white shadow-slate-200 shadow-lg',
+  };
+  const container = document.getElementById('service-cards');
+  if (!container) return;
+  container.innerHTML = services.map((s, i) => `
+    <div class="card bg-white rounded-2xl p-5 border border-[#E4E7EB] shadow-sm flex flex-col" style="animation-delay:${i*0.04}s">
+      <div class="flex items-start justify-between mb-2.5">
+        <h3 class="font-semibold text-[#0F172A] text-sm">${s.name}</h3>
+        <span class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ml-2 ${tagColorMap[s.color]}">${s.price.split('·')[0] || s.price}</span>
+      </div>
+      <p class="text-xs text-[#64748B] leading-relaxed mb-3 flex-1">${s.desc}</p>
+      <div class="flex flex-wrap gap-1 mb-4">
+        ${s.tags.map(t => `<span class="text-xs bg-[#F1F3F5] text-[#64748B] px-2 py-0.5 rounded-md">${t}</span>`).join('')}
+      </div>
+      <a href="${s.url}" target="_blank" class="block w-full text-center py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02] active:scale-100 ${btnStyles[s.color]}">
+        访问平台
+        <svg class="w-4 h-4 inline ml-1.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      </a>
+    </div>
+  `).join('');
+}
+
+// ── UTILS ───────────────────────────────────────────────
+function truncate(text, max) { return text.length > max ? text.slice(0, max) + '...' : text; }
+function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  void t.offsetWidth;
+  t.classList.add('toast-enter');
+  setTimeout(() => t.classList.add('hidden'), 2800);
+}
+
+renderServiceCards();
+</script>
+</body>
+</html>
