@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
+import WaveBackground from '@/components/WaveBackground'
 
 type Tab = 'login' | 'register'
 
@@ -126,13 +127,7 @@ function LoginFormContent() {
 
   return (
     <div className="min-h-screen w-full flex relative overflow-hidden bg-pg-bg">
-      {/* ====== Animated Background Blobs ====== */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-brand-300/10 blur-[100px] animate-float-slow" />
-        <div className="absolute top-1/2 -right-32 w-[400px] h-[400px] rounded-full bg-accent-300/8 blur-[100px] animate-float-medium" />
-        <div className="absolute -bottom-32 left-1/3 w-[450px] h-[450px] rounded-full bg-brand-200/8 blur-[100px] animate-float-fast" />
-        <div className="absolute top-1/4 right-1/4 w-[300px] h-[300px] rounded-full bg-accent-400/6 blur-[80px] animate-float-slower" />
-      </div>
+      <WaveBackground />
 
       {/* ====== Left — Branding ====== */}
       <div className="hidden lg:flex w-[480px] xl:w-[560px] relative overflow-hidden bg-gradient-to-br from-brand-700 via-brand-600 to-brand-800 z-10">
@@ -177,7 +172,7 @@ function LoginFormContent() {
       </div>
 
       {/* ====== Right — Forms ====== */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 z-10">
+      <div className="flex-1 flex items-center justify-center px-6 py-12 relative z-10">
         <div className="w-full max-w-[420px]">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-10">
