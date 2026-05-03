@@ -75,6 +75,12 @@ tailwind.config = {
   .btn-primary { transition: all 0.2s ease; }
   .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(30,58,95,0.2); }
   .btn-primary:active { transform: translateY(0); }
+  .qa-item { transition: all 0.25s ease; }
+  .qa-item .qa-a { display: none; }
+  .qa-item.open .qa-a { display: block; animation: qaIn 0.3s ease; }
+  .qa-item.open .qa-chevron { transform: rotate(180deg); }
+  .qa-item.open { border-color: #1E3A5F; background: #f8fafc; }
+  @keyframes qaIn { from { opacity: 0; transform: translateY(-4px); max-height: 0; } to { opacity: 1; transform: translateY(0); max-height: 200px; } }
 </style>
 </head>
 <body class="bg-[#F8FAFC] text-[#0F172A] min-h-screen antialiased">
@@ -298,6 +304,15 @@ tailwind.config = {
           <p class="text-sm text-[#64748B]">预览改写效果<br>下载处理后的 .docx 或对照版</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- Q&A -->
+  <section class="border-t border-[#E4E7EB]">
+    <div class="max-w-3xl mx-auto px-4 py-16 sm:py-20">
+      <h2 class="text-2xl sm:text-3xl font-bold text-center text-[#0F172A] mb-3 font-display">常见问题</h2>
+      <p class="text-center text-[#64748B] mb-10 text-sm">关于降重和 AI 检测，你关心的问题都在这里</p>
+      <div class="space-y-3" id="qa-list"></div>
     </div>
   </section>
 
@@ -718,6 +733,32 @@ function showToast(msg) {
   t.classList.add('toast-enter');
   setTimeout(() => t.classList.add('hidden'), 2800);
 }
+
+// ── Q&A ──────────────────────────────────────────────────
+const qaData = [
+  { q:'降重后会影响论文的学术表达吗？', a:'本工具采用规则引擎 + 句法模板，替换词均来自学术同义词库（如知网关键词体系），在降低重复率的同时尽量保留学术表达的严谨性。建议处理后人工通读微调。' },
+  { q:'什么是 AI 率？为什么需要降低？', a:'AI 率是指文本被检测系统判定为"由 AI 生成"的概率。当前高校普遍引入 AIGC 检测（如知网 AIGC 检测），AI 率过高可能导致论文被退回。本工具通过句长随机化、连接词多样化、AI 典型用语替换等方式降低 AI 特征。' },
+  { q:'零宽不连词（ZWNJ）是什么？', a:'零宽不连词（U+200C）是一个不可见的 Unicode 字符，插入字词之间可以打断查重系统的连续匹配，但对人眼完全不可见。深度模式下会自动随机插入。注意：部分查重系统已能过滤此字符，仅作为辅助手段之一。' },
+  { q:'会保存或泄露我的论文吗？', a:'不会。本工具采用纯前端处理，文件仅在你的浏览器本地解析和改写，不上传到任何服务器。你可以在浏览器开发者工具 Network 面板验证——处理过程中不会有任何网络请求发出。' },
+  { q:'为什么只支持 .docx 格式？', a:'.docx 是 Word 2007 以来的标准格式，基于 Open XML，方便在前端使用 JSZip 解析段落结构。如果你只有 .doc 或 .pdf 文件，可用 Word 另存为 .docx 后再上传。' },
+  { q:'处理后能降到多少查重率？', a:'效果取决于原文重复程度和处理强度。轻度模式保守替换约 15%，深度模式大幅改写约 55%。实测案例中，中等重复（50-70%）的论文使用中度模式通常可降至 20% 以下。但无法保证 100% 通过，建议处理后自行复查。' },
+];
+(function renderQA() {
+  const container = document.getElementById('qa-list');
+  if (!container) return;
+  container.innerHTML = qaData.map((item, i) => `
+    <div class="qa-item bg-white rounded-2xl border border-[#E4E7EB] shadow-sm cursor-pointer" onclick="toggleQA(this)">
+      <div class="flex items-center justify-between px-5 py-4">
+        <span class="text-sm font-medium text-[#0F172A] pr-4">${item.q}</span>
+        <svg class="qa-chevron w-5 h-5 text-[#94A3B8] shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="qa-a px-5 pb-4">
+        <p class="text-sm text-[#475569] leading-relaxed border-t border-[#E4E7EB] pt-3">${item.a}</p>
+      </div>
+    </div>
+  `).join('');
+})();
+function toggleQA(el) { el.classList.toggle('open'); }
 
 renderServiceCards();
 </script>
