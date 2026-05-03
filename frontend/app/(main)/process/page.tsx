@@ -2,10 +2,12 @@
 
 import { useState, useRef, useCallback, type DragEvent } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import StrategyPanel from '@/components/process/StrategyPanel'
 import DocPreview from '@/components/process/DocPreview'
 import ResultsView from '@/components/process/ResultsView'
 import { useToast } from '@/components/ToastProvider'
+import { useAuth } from '@/components/AuthProvider'
 import { mockParagraphs } from '@/lib/data'
 
 type Step = 'upload' | 'strategy' | 'results'
@@ -17,8 +19,19 @@ export default function ProcessPage() {
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { showToast } = useToast()
+  const { isAuthenticated } = useAuth()
+  const router = useRouter()
+
+  function guardAuth(): boolean {
+    if (!isAuthenticated) {
+      router.push('/login?redirect=/process')
+      return false
+    }
+    return true
+  }
 
   const processFile = useCallback((file: File) => {
+    if (!guardAuth()) return
     if (!file.name.endsWith('.docx')) {
       showToast('仅支持 .docx 格式文件')
       return
@@ -30,7 +43,7 @@ export default function ProcessPage() {
     setFileName(file.name)
     setParagraphs(mockParagraphs)
     setStep('strategy')
-  }, [showToast])
+  }, [showToast, isAuthenticated])
 
   function handleDragOver(e: DragEvent) {
     e.preventDefault()
@@ -81,6 +94,22 @@ export default function ProcessPage() {
       {/* Step 1: Upload */}
       {step === 'upload' && (
         <div className="fade-in">
+          {!isAuthenticated && (
+            <div className="max-w-xl mx-auto mb-5 bg-white rounded-2xl border border-amber-200 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-amber-800">上传论文需要先登录</p>
+                  <p className="text-xs text-amber-600">登录后即可免费使用智能降重功能</p>
+                </div>
+              </div>
+              <Link href="/login?redirect=/process" className="shrink-0 px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-xl hover:bg-amber-600 transition-colors">
+                去登录
+              </Link>
+            </div>
+          )}
           <div className="max-w-xl mx-auto">
             <div
               className={`file-drop bg-white border-2 border-dashed rounded-3xl p-14 sm:p-16 text-center cursor-pointer transition-colors ${dragOver ? 'border-brand-600 bg-brand-50 scale-[1.01]' : 'border-brand-200 hover:border-brand-400'}`}
@@ -111,7 +140,7 @@ export default function ProcessPage() {
             paragraphCount={paragraphs.length}
             charCount={paragraphs.reduce((s, p) => s + p.length, 0)}
             onReset={handleReset}
-            onStart={() => setStep('results')}
+            onStart={() => { if (guardAuth()) setStep('results') }}
           />
           <div className="lg:col-span-2">
             <DocPreview paragraphs={paragraphs} />

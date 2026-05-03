@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import { Crimson_Pro, Atkinson_Hyperlegible } from 'next/font/google'
-import Navbar from '@/components/Navbar'
 import ToastProvider from '@/components/ToastProvider'
-import Footer from '@/components/Footer'
+import AuthProvider from '@/components/AuthProvider'
 import './globals.css'
 
 const crimsonPro = Crimson_Pro({
@@ -31,9 +30,9 @@ export default function RootLayout({
     <html lang="zh-CN" className={`${crimsonPro.variable} ${atkinson.variable}`}>
       <body className="bg-pg-bg text-pg-text min-h-screen antialiased font-[family-name:var(--font-body)] flex flex-col">
         <ToastProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>
