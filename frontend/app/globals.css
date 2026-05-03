@@ -54,6 +54,53 @@
   to { opacity: 1; transform: translateY(0); max-height: 200px; }
 }
 
+@keyframes floatSlow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(20px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+@keyframes floatMedium {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-30px, -20px) scale(1.08); }
+}
+
+@keyframes floatFast {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(15px, 25px) scale(1.06); }
+}
+
+@keyframes floatSlower {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-25px, -15px) scale(1.04); }
+  75% { transform: translate(25px, 10px) scale(0.96); }
+}
+
+@keyframes fadeInForm {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-float-slow {
+  animation: floatSlow 12s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: floatMedium 10s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: floatFast 8s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: floatSlower 14s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fadeInForm 0.3s ease-out;
+}
+
 .card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
