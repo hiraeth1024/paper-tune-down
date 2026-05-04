@@ -1,6 +1,10 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
     restart: always
     env_file: ./backend/.env
     volumes:
@@ -11,6 +15,8 @@ services:
       context: ./frontend
       args:
         NEXT_PUBLIC_API_URL: http://110.40.133.106
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
     restart: always
     depends_on:
       - backend
