@@ -1,5 +1,12 @@
+# =============================================================================
+# PaperTune — 论文降重助手
+# =============================================================================
+# 该 compose 文件只包含项目服务，不包含 nginx。
+# nginx 由 ../shared-nginx/docker-compose.yml 独立管理，作为多项目共享网关。
+# =============================================================================
+
 services:
-  backend:
+  papertune-backend:
     build:
       context: ./backend
       args:
@@ -9,8 +16,10 @@ services:
     env_file: ./backend/.env
     volumes:
       - backend_data:/app/data
+    networks:
+      - papertune
 
-  frontend:
+  papertune-frontend:
     build:
       context: ./frontend
       args:
@@ -19,16 +28,13 @@ services:
         HTTPS_PROXY: ${HTTPS_PROXY:-}
     restart: always
     depends_on:
-      - backend
+      - papertune-backend
+    networks:
+      - papertune
 
-  nginx:
-    build: ./nginx
-    restart: always
-    ports:
-      - "80:80"
-    depends_on:
-      - frontend
-      - backend
+networks:
+  papertune:
+    name: papertune
 
 volumes:
   backend_data:

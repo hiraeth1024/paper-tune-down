@@ -1,0 +1,27 @@
+# =============================================================================
+# Shared Nginx Gateway
+# =============================================================================
+# 该容器是服务器唯一对外的 HTTP 入口（80 端口）。
+# 它通过 external network 接入各个项目的 Docker 网络，按路径反代到对应服务。
+#
+# 新增项目时：
+#   1. 在下方 networks 区声明新项目网络（external: true）
+#   2. 在 nginx service 的 networks 列表中添加
+#   3. 更新 nginx.conf 的 location 规则
+# =============================================================================
+
+services:
+  nginx:
+    build: .
+    restart: always
+    ports:
+      - "80:80"
+    networks:
+      - papertune
+      # - project2  # 新增项目时取消注释
+
+networks:
+  papertune:
+    external: true
+  # project2:     # 新增项目时取消注释
+  #   external: true
