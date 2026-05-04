@@ -10,14 +10,15 @@ from schemas import ProcessRequest, ProcessResponse, ProcessStats, RewritePair, 
 from engines.orchestrator import process_paragraph
 from core.config import CORS_ORIGINS
 from api.auth import router as auth_router
-from core.user_store import seed_admin
+from core.user_store import seed_admin  # disabled in production
 
 app = FastAPI(title="PaperTune API", version="0.2.0")
 
 
 @app.on_event("startup")
 def on_startup():
-    seed_admin()
+    # seed_admin()  # disabled in production — register via normal flow
+    pass
 
 app.include_router(auth_router)
 

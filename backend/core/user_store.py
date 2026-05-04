@@ -2,6 +2,7 @@
 User storage abstraction. Uses Supabase when configured, otherwise in-memory (dev mode).
 """
 import os
+import uuid
 from typing import TypedDict
 
 
@@ -14,17 +15,16 @@ class UserRecord(TypedDict):
 
 # In-memory fallback store
 _memory_users: dict[str, UserRecord] = {}
-# Pre-seed mock admin account
-import uuid
-from core.auth import hash_password
 
-_admin_id = str(uuid.uuid4())
-_memory_users[_admin_id] = {
-    "id": _admin_id,
-    "email": "admin@test.com",
-    "username": "admin",
-    "password_hash": hash_password("admin123"),
-}
+# Pre-seed admin account (disabled in production)
+# from core.auth import hash_password
+# _admin_id = str(uuid.uuid4())
+# _memory_users[_admin_id] = {
+#     "id": _admin_id,
+#     "email": "admin@test.com",
+#     "username": "admin",
+#     "password_hash": hash_password("admin123"),
+# }
 
 SUPABASE_AVAILABLE = False
 
@@ -106,18 +106,18 @@ def find_user_by_id(user_id: str) -> UserRecord | None:
     return _memory_users.get(user_id)
 
 
-def seed_admin():
-    """Ensure admin account exists in the active store (memory or Supabase)."""
-    supabase = _get_supabase()
-    if supabase:
-        # Upsert: insert if not exists, update password hash if exists
-        result = supabase.table("users").upsert({
-            "email": "admin@test.com",
-            "username": "admin",
-            "password_hash": hash_password("admin123"),
-        }, on_conflict="username").execute()
-        if result.data:
-            print(f"[DB] Admin account ready (id={result.data[0].get('id', '?')})")
+# seed_admin disabled in production — users register via normal email verification flow
+# def seed_admin():
+#     """Ensure admin account exists in the active store (memory or Supabase)."""
+#     supabase = _get_supabase()
+#     if supabase:
+#         result = supabase.table("users").upsert({
+#             "email": "admin@test.com",
+#             "username": "admin",
+#             "password_hash": hash_password("admin123"),
+#         }, on_conflict="username").execute()
+#         if result.data:
+#             print(f"[DB] Admin account ready (id={result.data[0].get('id', '?')})")
 
 
 # Supabase users table migration SQL:

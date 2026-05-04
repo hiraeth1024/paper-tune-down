@@ -263,25 +263,6 @@ function LoginFormContent() {
                 ) : '登录'}
               </button>
 
-              {/* Quick demo login */}
-              <button
-                type="button"
-                onClick={async () => {
-                  setLoginAccount('admin')
-                  setLoginPassword('admin123')
-                  const result = await login('admin', 'admin123')
-                  if (result.ok) {
-                    showToast('登录成功')
-                    router.push(redirect)
-                  } else {
-                    showToast(result.error || '登录失败，请检查后端是否启动')
-                  }
-                }}
-                className="w-full mt-3 py-2 text-xs text-pg-subtle hover:text-brand-600 border border-dashed border-pg-border hover:border-brand-300 rounded-xl transition-colors"
-              >
-                快速体验 (admin / admin123)
-              </button>
-
               <p className="text-center text-xs text-pg-subtle mt-3">
                 还没有账号？<button type="button" onClick={() => setTab('register')} className="text-brand-600 font-medium hover:underline">立即注册</button>
               </p>
