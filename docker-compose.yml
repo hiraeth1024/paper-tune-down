@@ -7,10 +7,11 @@ services:
       - backend_data:/app/data
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://110.40.133.106
     restart: always
-    environment:
-      - NEXT_PUBLIC_API_URL=http://110.40.133.106
     depends_on:
       - backend
 
