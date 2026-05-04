@@ -10,7 +10,7 @@ from schemas import ProcessRequest, ProcessResponse, ProcessStats, RewritePair, 
 from engines.orchestrator import process_paragraph
 from core.config import CORS_ORIGINS
 from api.auth import router as auth_router
-from core.user_store import seed_admin  # disabled in production
+# from core.user_store import seed_admin  # disabled in production
 
 app = FastAPI(title="PaperTune API", version="0.2.0")
 
