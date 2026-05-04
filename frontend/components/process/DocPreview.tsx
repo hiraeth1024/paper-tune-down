@@ -26,7 +26,7 @@ export default function DocPreview({ paragraphs }: Props) {
         <span className="text-sm font-medium text-[#334155]">文档预览</span>
         <span className="text-xs text-pg-subtle">{paragraphs.length} 段</span>
       </div>
-      <div className="divide-y divide-pg-surface max-h-[500px] overflow-y-auto">
+      <div className="divide-y divide-pg-surface max-h-[600px] overflow-y-auto">
         {paragraphs.map((p, i) => (
           <div key={i} className="px-4 py-3 hover:bg-pg-bg transition-colors">
             <span className="text-xs text-pg-subtle font-medium mr-2">第 {i + 1} 段</span>

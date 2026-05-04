@@ -8,7 +8,7 @@ import DocPreview from '@/components/process/DocPreview'
 import ResultsView from '@/components/process/ResultsView'
 import { useToast } from '@/components/ToastProvider'
 import { useAuth } from '@/components/AuthProvider'
-import { mockParagraphs } from '@/lib/data'
+import { parseDocx } from '@/lib/docx-parser'
 
 type Step = 'upload' | 'strategy' | 'results'
 
@@ -16,6 +16,7 @@ export default function ProcessPage() {
   const [step, setStep] = useState<Step>('upload')
   const [fileName, setFileName] = useState('')
   const [paragraphs, setParagraphs] = useState<string[]>([])
+  const [parsing, setParsing] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { showToast } = useToast()
@@ -30,7 +31,7 @@ export default function ProcessPage() {
     return true
   }
 
-  const processFile = useCallback((file: File) => {
+  const processFile = useCallback(async (file: File) => {
     if (!guardAuth()) return
     if (!file.name.endsWith('.docx')) {
       showToast('仅支持 .docx 格式文件')
@@ -41,8 +42,21 @@ export default function ProcessPage() {
       return
     }
     setFileName(file.name)
-    setParagraphs(mockParagraphs)
-    setStep('strategy')
+    setParsing(true)
+    try {
+      const parsed = await parseDocx(file)
+      if (parsed.length === 0) {
+        showToast('未能从文件中提取到有效段落，请检查文件内容')
+        setParsing(false)
+        return
+      }
+      setParagraphs(parsed)
+      setStep('strategy')
+    } catch {
+      showToast('文件解析失败，请确认上传的是有效的 .docx 文件')
+    } finally {
+      setParsing(false)
+    }
   }, [showToast, isAuthenticated])
 
   function handleDragOver(e: DragEvent) {
@@ -94,6 +108,15 @@ export default function ProcessPage() {
       {/* Step 1: Upload */}
       {step === 'upload' && (
         <div className="fade-in">
+          {parsing && (
+            <div className="max-w-xl mx-auto mb-5 bg-white rounded-2xl border border-brand-200 p-4 flex items-center gap-4">
+              <div className="w-8 h-8 border-[3px] border-brand-200 border-t-brand-600 rounded-full animate-spin shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-pg-text">正在解析文件...</p>
+                <p className="text-xs text-pg-muted">{fileName}</p>
+              </div>
+            </div>
+          )}
           {!isAuthenticated && (
             <div className="max-w-xl mx-auto mb-5 bg-white rounded-2xl border border-amber-200 p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">

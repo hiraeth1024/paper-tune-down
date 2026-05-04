@@ -263,7 +263,24 @@ function LoginFormContent() {
                 ) : '登录'}
               </button>
 
-              <p className="text-center text-xs text-pg-subtle">
+              {/* Mock login helper */}
+              <button
+                type="button"
+                onClick={async () => {
+                  setLoginAccount('admin')
+                  setLoginPassword('admin123')
+                  const result = await login('admin', 'admin123')
+                  if (result.ok) {
+                    showToast('Mock 登录成功')
+                    router.push(redirect)
+                  }
+                }}
+                className="w-full mt-3 py-2 text-xs text-pg-subtle hover:text-brand-600 border border-dashed border-pg-border hover:border-brand-300 rounded-xl transition-colors"
+              >
+                一键 Mock 登录 (admin / admin123)
+              </button>
+
+              <p className="text-center text-xs text-pg-subtle mt-3">
                 还没有账号？<button type="button" onClick={() => setTab('register')} className="text-brand-600 font-medium hover:underline">立即注册</button>
               </p>
             </form>
