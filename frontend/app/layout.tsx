@@ -19,6 +19,7 @@ const atkinson = Atkinson_Hyperlegible({
 export const metadata: Metadata = {
   title: 'PaperTune — 论文降重助手',
   description: '上传 .docx 格式论文，智能识别高重复段落，规则引擎精准改写，保留学术风格的同时有效降低查重率。',
+  icons: { icon: '/favicon.svg', apple: '/favicon.svg' },
 }
 
 export default function RootLayout({

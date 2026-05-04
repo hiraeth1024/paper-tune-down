@@ -40,7 +40,7 @@ export default function QASection() {
                 </div>
                 {open && (
                   <div className="px-5 pb-4" style={{ animation: 'qaIn 0.3s ease' }}>
-                    <p className="text-sm text-[#475569] leading-relaxed border-t border-pg-border pt-3">{item.a}</p>
+                    <div className="text-sm text-[#475569] leading-relaxed border-t border-pg-border pt-3 [&_a]:text-brand-600 [&_a]:font-medium [&_a]:hover:underline" dangerouslySetInnerHTML={{ __html: item.a }} />
                   </div>
                 )}
               </div>

@@ -30,6 +30,7 @@ export const qaData: QAItem[] = [
   { q: '会保存或泄露我的论文吗？', a: '不会。本工具采用纯前端处理，文件仅在你的浏览器本地解析和改写，不上传到任何服务器。你可以在浏览器开发者工具 Network 面板验证——处理过程中不会有任何网络请求发出。' },
   { q: '为什么只支持 .docx 格式？', a: '.docx 是 Word 2007 以来的标准格式，基于 Open XML，方便在前端使用 JSZip 解析段落结构。如果你只有 .doc 或 .pdf 文件，可用 Word 另存为 .docx 后再上传。' },
   { q: '处理后能降到多少查重率？', a: '效果取决于原文重复程度和处理强度。轻度模式保守替换约 15%，深度模式大幅改写约 55%。实测案例中，中等重复（50-70%）的论文使用中度模式通常可降至 20% 以下。但无法保证 100% 通过，建议处理后自行复查。' },
+  { q: '为什么完全免费？靠什么盈利？', a: 'PaperTune 是一个开源项目，目的是帮助更多学生降低论文查重的经济负担，让大家不再为高昂的降重费用发愁。项目不盈利，服务器和 API 费用由开发者自己承担。如果你觉得好用，欢迎到 <a href="https://github.com/hiraeth1024/paper-tune-down" target="_blank" rel="noopener noreferrer" class="text-brand-600 font-medium hover:underline">GitHub 给个 Star ⭐</a>，这就是对我们最好的支持！' },
 ]
 
 export const mockParagraphs = [

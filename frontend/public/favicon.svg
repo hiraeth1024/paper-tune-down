@@ -1,0 +1,26 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Paper Tune Down icon</title>
+  <desc id="desc">Document tuning mark with a downward refinement arrow.</desc>
+  <defs>
+    <linearGradient id="markGradient" x1="32" y1="20" x2="224" y2="236" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2DD4BF"/>
+      <stop offset="0.52" stop-color="#0EA5A3"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="paperGradient" x1="72" y1="45" x2="177" y2="216" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EAF7F5"/>
+    </linearGradient>
+  </defs>
+  <rect x="18" y="18" width="220" height="220" rx="54" fill="url(#markGradient)"/>
+  <path d="M75 44H151L194 87V204C194 215.046 185.046 224 174 224H75C63.9543 224 55 215.046 55 204V64C55 52.9543 63.9543 44 75 44Z" fill="url(#paperGradient)"/>
+  <path d="M151 44V75C151 81.6274 156.373 87 163 87H194L151 44Z" fill="#CFF5EE"/>
+  <path d="M84 111H160" stroke="#0F766E" stroke-width="11" stroke-linecap="round"/>
+  <path d="M84 145H139" stroke="#14B8A6" stroke-width="11" stroke-linecap="round"/>
+  <path d="M84 179H123" stroke="#60A5FA" stroke-width="11" stroke-linecap="round"/>
+  <circle cx="159" cy="111" r="12" fill="#0F766E"/>
+  <circle cx="113" cy="145" r="12" fill="#14B8A6"/>
+  <circle cx="137" cy="179" r="12" fill="#2563EB"/>
+  <path d="M178 133V181" stroke="#0F172A" stroke-width="13" stroke-linecap="round"/>
+  <path d="M158 165L178 185L198 165" stroke="#0F172A" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
