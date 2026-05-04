@@ -8,20 +8,31 @@ import DocPreview from '@/components/process/DocPreview'
 import ResultsView from '@/components/process/ResultsView'
 import { useToast } from '@/components/ToastProvider'
 import { useAuth } from '@/components/AuthProvider'
-import { parseDocx } from '@/lib/docx-parser'
+import { parseDocx, toParagraphInputs, countByType, type ParsedParagraph } from '@/lib/docx-parser'
+import { processParagraphs, type ProcessResult } from '@/lib/api'
 
 type Step = 'upload' | 'strategy' | 'results'
+type Mode = 'both' | 'rewrite' | 'de_ai'
+type Intensity = 'light' | 'medium' | 'deep'
 
 export default function ProcessPage() {
   const [step, setStep] = useState<Step>('upload')
   const [fileName, setFileName] = useState('')
-  const [paragraphs, setParagraphs] = useState<string[]>([])
+  const [parsedParagraphs, setParsedParagraphs] = useState<ParsedParagraph[]>([])
+  const [originalFile, setOriginalFile] = useState<File | null>(null)
   const [parsing, setParsing] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [mode, setMode] = useState<Mode>('both')
+  const [intensity, setIntensity] = useState<Intensity>('medium')
+  const [zwnjProb, setZwnjProb] = useState(0.35)
+  const [processing, setProcessing] = useState(false)
+  const [processResult, setProcessResult] = useState<ProcessResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { showToast } = useToast()
   const { isAuthenticated } = useAuth()
   const router = useRouter()
+
+  const INTENSITY_DEFAULTS: Record<Intensity, number> = { light: 0.15, medium: 0.35, deep: 0.60 }
 
   function guardAuth(): boolean {
     if (!isAuthenticated) {
@@ -50,7 +61,8 @@ export default function ProcessPage() {
         setParsing(false)
         return
       }
-      setParagraphs(parsed)
+      setParsedParagraphs(parsed)
+      setOriginalFile(file)
       setStep('strategy')
     } catch {
       showToast('文件解析失败，请确认上传的是有效的 .docx 文件')
@@ -86,10 +98,31 @@ export default function ProcessPage() {
     }
   }
 
+  async function handleStart() {
+    if (!guardAuth()) return
+    const inputs = toParagraphInputs(parsedParagraphs)
+    if (inputs.filter(p => !p.skip).length === 0) {
+      showToast('没有可处理的正文段落')
+      return
+    }
+    setProcessing(true)
+    setStep('results')
+    try {
+      const data = await processParagraphs(inputs, mode, intensity, zwnjProb)
+      setProcessResult(data)
+    } catch {
+      showToast('处理失败，请稍后重试')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   function handleReset() {
     setStep('upload')
     setFileName('')
-    setParagraphs([])
+    setParsedParagraphs([])
+    setProcessResult(null)
+    setOriginalFile(null)
   }
 
   return (
@@ -160,20 +193,33 @@ export default function ProcessPage() {
         <div className="grid lg:grid-cols-3 gap-6">
           <StrategyPanel
             fileName={fileName}
-            paragraphCount={paragraphs.length}
-            charCount={paragraphs.reduce((s, p) => s + p.length, 0)}
+            paragraphCount={parsedParagraphs.length}
+            contentParagraphCount={countByType(parsedParagraphs).content}
+            charCount={parsedParagraphs.reduce((s, p) => s + p.text.length, 0)}
+            mode={mode}
+            intensity={intensity}
+            zwnjProb={zwnjProb}
+            onModeChange={setMode}
+            onIntensityChange={(i) => { setIntensity(i); setZwnjProb(INTENSITY_DEFAULTS[i]) }}
+            onZwnjProbChange={setZwnjProb}
             onReset={handleReset}
-            onStart={() => { if (guardAuth()) setStep('results') }}
+            onStart={handleStart}
           />
           <div className="lg:col-span-2">
-            <DocPreview paragraphs={paragraphs} />
+            <DocPreview paragraphs={parsedParagraphs} />
           </div>
         </div>
       )}
 
       {/* Step 3: Results */}
       {step === 'results' && (
-        <ResultsView paragraphs={paragraphs} />
+        <ResultsView
+          results={processResult?.results || null}
+          stats={processResult?.stats || null}
+          processing={processing}
+          paragraphCount={parsedParagraphs.length}
+          originalFile={originalFile}
+        />
       )}
     </div>
   )

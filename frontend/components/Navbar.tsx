@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useAuth } from '@/components/AuthProvider'
 
 const links = [
   {
@@ -36,7 +37,29 @@ const links = [
 
 export default function Navbar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, isAuthenticated, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function handleLogout() {
+    logout()
+    setDropdownOpen(false)
+    setMobileOpen(false)
+    router.push('/')
+  }
 
   return (
     <nav className="bg-white/80 backdrop-blur-md border-b border-pg-border sticky top-0 z-50">
@@ -71,16 +94,52 @@ export default function Navbar() {
 
           {/* Right side actions */}
           <div className="flex items-center gap-1.5">
-            {/* Login button */}
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              登录
-            </Link>
+            {isAuthenticated ? (
+              /* Logged in: user dropdown */
+              <div className="relative hidden sm:block" ref={dropdownRef}>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-[#334155] hover:bg-pg-surface transition-colors"
+                >
+                  <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="max-w-[100px] truncate">{user?.username}</span>
+                  <svg className={`w-3 h-3 text-pg-subtle transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl border border-pg-border shadow-lg overflow-hidden animate-fade-in">
+                    <div className="px-3 py-2.5 border-b border-pg-border">
+                      <p className="text-sm font-medium text-pg-text truncate">{user?.username}</p>
+                      <p className="text-xs text-pg-muted truncate">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-3 py-2.5 text-sm text-[#334155] hover:bg-pg-surface transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4 text-pg-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      退出登录
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Not logged in: login button */
+              <Link
+                href="/login"
+                className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                登录
+              </Link>
+            )}
 
             {/* Free badge */}
             <span className="hidden sm:inline text-xs font-medium text-accent-700 bg-accent-50 px-3 py-1 rounded-full">
@@ -127,16 +186,33 @@ export default function Navbar() {
                 </Link>
               )
             })}
-            <Link
-              href="/login"
-              onClick={() => setMobileOpen(false)}
-              className="inline-flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium text-[#334155]"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              登录
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <div className="px-3 py-2 text-sm text-pg-muted">
+                  {user?.username} · {user?.email}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium text-[#334155]"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  退出登录
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="inline-flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium text-[#334155]"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                登录
+              </Link>
+            )}
             <span className="inline-block text-xs font-medium text-accent-700 bg-accent-50 px-3 py-1 ml-3 rounded-full">
               免费使用
             </span>

@@ -1,19 +1,27 @@
 'use client'
 
-import { useState } from 'react'
-
 interface Props {
   fileName: string
   paragraphCount: number
+  contentParagraphCount: number
   charCount: number
+  mode: 'both' | 'rewrite' | 'de_ai'
+  intensity: 'light' | 'medium' | 'deep'
+  zwnjProb: number
+  onModeChange: (m: 'both' | 'rewrite' | 'de_ai') => void
+  onIntensityChange: (i: 'light' | 'medium' | 'deep') => void
+  onZwnjProbChange: (v: number) => void
   onReset: () => void
   onStart: () => void
 }
 
-export default function StrategyPanel({ fileName, paragraphCount, charCount, onReset, onStart }: Props) {
-  const [mode, setMode] = useState<'both' | 'rewrite' | 'de_ai'>('both')
-  const [intensity, setIntensity] = useState<'light' | 'medium' | 'deep'>('medium')
+const ZWNJ_PRESETS = [
+  { label: '低', value: 0.15 },
+  { label: '中', value: 0.35 },
+  { label: '高', value: 0.60 },
+]
 
+export default function StrategyPanel({ fileName, paragraphCount, contentParagraphCount, charCount, mode, intensity, zwnjProb, onModeChange, onIntensityChange, onZwnjProbChange, onReset, onStart }: Props) {
   const modeOptions: { value: 'both' | 'rewrite' | 'de_ai'; label: string; desc: string }[] = [
     { value: 'both', label: '综合处理', desc: '降重 + 降 AI 率' },
     { value: 'rewrite', label: '仅降重', desc: '同义词替换 + 句式变换' },
@@ -36,7 +44,7 @@ export default function StrategyPanel({ fileName, paragraphCount, charCount, onR
           </div>
           <div>
             <p className="font-semibold text-pg-text text-sm">{fileName}</p>
-            <p className="text-xs text-pg-muted">{paragraphCount} 段 · {charCount} 字符</p>
+            <p className="text-xs text-pg-muted">{contentParagraphCount}/{paragraphCount} 段将被处理 · {charCount} 字符</p>
           </div>
         </div>
         <button onClick={onReset} className="text-xs text-pg-subtle hover:text-red-500 transition-colors self-start sm:self-center">重新上传</button>
@@ -53,7 +61,7 @@ export default function StrategyPanel({ fileName, paragraphCount, charCount, onR
                 key={opt.value}
                 className={`radio-card flex items-center gap-3 p-3 rounded-xl border ${checked ? 'border-brand-200 bg-brand-50/50' : 'border-pg-border'}`}
               >
-                <input type="radio" name="mode" value={opt.value} checked={checked} onChange={() => setMode(opt.value)} className="accent-brand-600 w-4 h-4" />
+                <input type="radio" name="mode" value={opt.value} checked={checked} onChange={() => onModeChange(opt.value)} className="accent-brand-600 w-4 h-4" />
                 <div>
                   <div className="text-sm font-medium text-pg-text">{opt.label}</div>
                   <div className="text-xs text-pg-muted">{opt.desc}</div>
@@ -76,7 +84,7 @@ export default function StrategyPanel({ fileName, paragraphCount, charCount, onR
                 className={`radio-card flex items-center justify-between p-3 rounded-xl border ${checked ? 'border-brand-200 bg-brand-50/50' : 'border-pg-border'}`}
               >
                 <div className="flex items-center gap-3">
-                  <input type="radio" name="intensity" value={opt.value} checked={checked} onChange={() => setIntensity(opt.value)} className="accent-brand-600 w-4 h-4" />
+                  <input type="radio" name="intensity" value={opt.value} checked={checked} onChange={() => onIntensityChange(opt.value)} className="accent-brand-600 w-4 h-4" />
                   <div>
                     <div className="text-sm font-medium text-pg-text">
                       {opt.label}
@@ -87,6 +95,46 @@ export default function StrategyPanel({ fileName, paragraphCount, charCount, onR
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-md ${checked ? 'text-brand-600 bg-brand-50' : 'text-pg-muted bg-pg-surface'}`}>{opt.pct}</span>
               </label>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ZWNJ probability slider */}
+      <div className="bg-white rounded-2xl border border-pg-border p-5 slide-up" style={{ animationDelay: '0.1s' }}>
+        <div className="flex items-center justify-between mb-1">
+          <h4 className="font-semibold text-pg-text font-[family-name:var(--font-display)] text-sm">零宽字符注入</h4>
+          <span className="text-xs px-2 py-0.5 rounded-md bg-brand-50 text-brand-600 font-medium">{Math.round(zwnjProb * 100)}%</span>
+        </div>
+        <p className="text-xs text-pg-muted mb-3">不可见字符，不影响排版，用于降低查重率</p>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={zwnjProb}
+          onChange={e => onZwnjProbChange(parseFloat(e.target.value))}
+          className="w-full accent-brand-600 mb-2"
+        />
+        <div className="flex justify-between text-xs text-pg-subtle mb-3">
+          <span>0%</span>
+          <span>100%</span>
+        </div>
+        <div className="flex gap-2">
+          {ZWNJ_PRESETS.map(preset => {
+            const active = zwnjProb === preset.value
+            return (
+              <button
+                key={preset.value}
+                onClick={() => onZwnjProbChange(preset.value)}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                  active
+                    ? 'border-brand-200 bg-brand-50 text-brand-600'
+                    : 'border-pg-border text-pg-subtle hover:bg-pg-surface'
+                }`}
+              >
+                {preset.label}({Math.round(preset.value * 100)}%)
+              </button>
             )
           })}
         </div>

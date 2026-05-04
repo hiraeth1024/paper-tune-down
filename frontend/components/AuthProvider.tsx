@@ -1,14 +1,10 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-
-interface User {
-  email: string
-  username: string
-}
+import { apiSendCode, apiLogin, apiRegister, apiGetMe, type AuthUser } from '@/lib/api'
 
 interface AuthContextValue {
-  user: User | null
+  user: AuthUser | null
   isAuthenticated: boolean
   sendCode: (email: string) => Promise<void>
   login: (emailOrUsername: string, password: string) => Promise<{ ok: boolean; error?: string }>
@@ -25,93 +21,78 @@ export function useAuth() {
   return ctx
 }
 
-const STORAGE_KEY = 'papertune_user'
-const DB_KEY = 'papertune_users_db'
-
-interface StoredUser {
-  email: string
-  username: string
-  password: string
-}
-
-function getUsersDB(): StoredUser[] {
-  try {
-    return JSON.parse(localStorage.getItem(DB_KEY) || '[]')
-  } catch { return [] }
-}
-
-function saveUsersDB(users: StoredUser[]) {
-  localStorage.setItem(DB_KEY, JSON.stringify(users))
-}
+const TOKEN_KEY = 'papertune_token'
+const USER_KEY = 'papertune_user'
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
 
+  // On mount: validate existing token
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) setUser(JSON.parse(stored))
-    } catch { /* ignore */ }
-  }, [])
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (!token) return
 
-  const persistUser = useCallback((u: User) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(u))
-    setUser(u)
+    apiGetMe().then(result => {
+      if (result.ok && result.user) {
+        setUser(result.user)
+        localStorage.setItem(USER_KEY, JSON.stringify(result.user))
+      } else {
+        localStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(USER_KEY)
+      }
+    }).catch(() => {
+      // Backend unreachable — try cached user
+      try {
+        const cached = localStorage.getItem(USER_KEY)
+        if (cached) setUser(JSON.parse(cached))
+      } catch { /* ignore */ }
+    })
   }, [])
 
   const sendCode = useCallback(async (email: string) => {
-    await new Promise(r => setTimeout(r, 800))
-    console.log(`[Mock] Verification code sent to ${email}: 123456`)
+    const result = await apiSendCode(email)
+    if (!result.ok) throw new Error(result.error || '发送失败')
   }, [])
 
   const login = useCallback(async (emailOrUsername: string, password: string) => {
-    await new Promise(r => setTimeout(r, 500))
-    const users = getUsersDB()
-    const found = users.find(u =>
-      (u.email === emailOrUsername || u.username === emailOrUsername) && u.password === password
-    )
-    if (found) {
-      persistUser({ email: found.email, username: found.username })
+    const result = await apiLogin(emailOrUsername, password)
+    if (result.ok && result.token && result.user) {
+      localStorage.setItem(TOKEN_KEY, result.token)
+      localStorage.setItem(USER_KEY, JSON.stringify(result.user))
+      setUser(result.user)
       return { ok: true }
     }
-    // Also accept mock admin account
-    if (emailOrUsername === 'admin' && password === 'admin123') {
-      persistUser({ email: 'admin@test.com', username: 'admin' })
-      return { ok: true }
-    }
-    return { ok: false, error: '用户名/邮箱或密码错误' }
-  }, [persistUser])
+    return { ok: false, error: result.error || '登录失败' }
+  }, [])
 
   const register = useCallback(async (email: string, password: string, code: string) => {
-    await new Promise(r => setTimeout(r, 500))
-    if (code !== '123456' && code.length < 5) {
-      return { ok: false, error: '验证码错误（试试 123456）' }
+    const result = await apiRegister(email, password, code)
+    if (result.ok && result.token && result.user) {
+      localStorage.setItem(TOKEN_KEY, result.token)
+      localStorage.setItem(USER_KEY, JSON.stringify(result.user))
+      setUser(result.user)
+      return { ok: true }
     }
-    const users = getUsersDB()
-    if (users.find(u => u.email === email)) {
-      return { ok: false, error: '该邮箱已被注册' }
-    }
-    const username = email.split('@')[0]
-    if (users.find(u => u.username === username)) {
-      return { ok: false, error: '该用户名已存在' }
-    }
-    users.push({ email, username, password })
-    saveUsersDB(users)
-    persistUser({ email, username })
-    return { ok: true }
-  }, [persistUser])
+    return { ok: false, error: result.error || '注册失败' }
+  }, [])
 
   const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
     setUser(null)
   }, [])
 
   const requireAuth = useCallback(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      setUser(JSON.parse(stored))
-      return true
-    }
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (token) return true
+    // Also check cached user as fallback
+    try {
+      const cached = localStorage.getItem(USER_KEY)
+      if (cached) {
+        setUser(JSON.parse(cached))
+        return true
+      }
+    } catch { /* ignore */ }
     return !!user
   }, [user])
 

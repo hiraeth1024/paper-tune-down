@@ -1,11 +1,21 @@
 import { truncate } from '@/lib/utils'
+import { countByType, getDisplayParagraphs, type ParsedParagraph, type MetadataLabel } from '@/lib/docx-parser'
+
+const labelColors: Record<MetadataLabel, string> = {
+  '标题': 'bg-pg-surface text-pg-subtle',
+  '摘要': 'bg-amber-50 text-amber-600',
+  '关键词': 'bg-purple-50 text-purple-600',
+  '正文': 'bg-brand-50 text-brand-600',
+}
 
 interface Props {
-  paragraphs: string[]
+  paragraphs: ParsedParagraph[]
 }
 
 export default function DocPreview({ paragraphs }: Props) {
-  if (!paragraphs.length) {
+  const displayParagraphs = getDisplayParagraphs(paragraphs)
+
+  if (!displayParagraphs.length) {
     return (
       <div className="bg-white rounded-2xl border border-pg-border overflow-hidden slide-up shadow-sm h-full">
         <div className="bg-pg-bg border-b border-pg-border px-4 py-2.5 flex items-center justify-between">
@@ -20,19 +30,36 @@ export default function DocPreview({ paragraphs }: Props) {
     )
   }
 
+  const { content, metadata } = countByType(paragraphs)
+
   return (
     <div className="bg-white rounded-2xl border border-pg-border overflow-hidden slide-up shadow-sm h-full">
       <div className="bg-pg-bg border-b border-pg-border px-4 py-2.5 flex items-center justify-between">
         <span className="text-sm font-medium text-[#334155]">文档预览</span>
-        <span className="text-xs text-pg-subtle">{paragraphs.length} 段</span>
+        <span className="text-xs text-pg-subtle">
+          {content} 个正文段落将被处理 · {metadata} 个元数据段落跳过
+        </span>
       </div>
-      <div className="divide-y divide-pg-surface max-h-[600px] overflow-y-auto">
-        {paragraphs.map((p, i) => (
-          <div key={i} className="px-4 py-3 hover:bg-pg-bg transition-colors">
-            <span className="text-xs text-pg-subtle font-medium mr-2">第 {i + 1} 段</span>
-            <span className="text-sm text-[#334155] leading-relaxed">{truncate(p, 110)}</span>
+      <div className="divide-y divide-pg-surface max-h-[800px] overflow-y-auto">
+        {paragraphs.map((p, docIdx) => {
+          if (p.text.length < 5) return null
+          return (
+          <div
+            key={docIdx}
+            className={`px-4 py-3 hover:bg-pg-bg transition-colors flex items-start gap-3 ${
+              p.type === 'metadata' ? 'opacity-60 bg-pg-bg/30' : ''
+            }`}
+          >
+            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${labelColors[p.label]} shrink-0 mt-0.5`}>
+              {p.label}
+            </span>
+            <span className="text-xs text-pg-subtle font-medium shrink-0 mt-0.5">第 {docIdx + 1} 段</span>
+            <span className="text-sm text-[#334155] leading-relaxed flex-1">{truncate(p.text, 110)}</span>
+            {p.type === 'metadata' && (
+              <span className="text-xs text-pg-subtle bg-pg-surface px-1.5 py-0.5 rounded shrink-0">跳过</span>
+            )}
           </div>
-        ))}
+        )})}
       </div>
     </div>
   )
