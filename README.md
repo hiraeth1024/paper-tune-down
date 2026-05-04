@@ -64,6 +64,27 @@ paper-tune-down/
 - Python >= 3.11
 - npm
 
+### 环境配置
+
+```bash
+# 复制环境变量模板并填入实际值
+cp backend/.env.example backend/.env
+```
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `SUPABASE_URL` | Supabase 项目地址 | - |
+| `SUPABASE_SERVICE_KEY` | Supabase 服务密钥 | - |
+| `SUPABASE_ANON_KEY` | Supabase 匿名密钥 | - |
+| `CORS_ORIGINS` | 允许的前端域名，逗号分隔 | `http://localhost:3000` |
+| `JWT_SECRET` | JWT 签名密钥 | 开发用默认值 |
+| `EMAIL_PROVIDER` | 邮件发送方式：`dev` / `resend` / `smtp` | `dev` |
+| `RESEND_API_KEY` | Resend API 密钥 | - |
+| `SMTP_HOST` | SMTP 服务器地址 | - |
+| `SMTP_PORT` | SMTP 端口 | `587` |
+
+> 开发阶段可直接使用默认值，`EMAIL_PROVIDER=dev` 会将验证码打印到控制台。
+
 ### 后端
 
 ```bash
