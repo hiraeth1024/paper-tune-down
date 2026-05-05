@@ -137,7 +137,7 @@ export default function ComparisonDemo() {
               />
             </div>
 
-            <p className="text-sm text-[#475569] leading-relaxed text-center">
+            <p className="text-sm text-[#475569] leading-relaxed text-center mt-2 pt-3 border-t border-pg-border/50">
               {item.desc}
             </p>
           </div>
