@@ -56,6 +56,7 @@ def process(request: ProcessRequest):
             original=p.text,
             rewritten=rewritten,
             changes=stats["total_replacements"] + stats["zwnj_insertions"] + stats["ai_patterns_removed"],
+            annotated=stats.get("annotated"),
         ))
         total_replacements += stats["total_replacements"]
         total_zwnj += stats["zwnj_insertions"]
@@ -122,17 +123,48 @@ def _build_compare_doc(doc: Document, results: list[RewritePair]):
 
 
 def _replace_content_paragraphs(doc: Document, results: list[RewritePair]):
-    """Replace text of content paragraphs, preserving formatting of the first run."""
+    """Replace text of content paragraphs, preserving per-run formatting (bold, font, size)."""
     for i, pair in enumerate(results):
         if pair.changes == 0:
             continue
         if i >= len(doc.paragraphs):
             break
         para = doc.paragraphs[i]
-        if para.runs:
-            para.runs[0].text = pair.rewritten
-            for run in para.runs[1:]:
+        runs = para.runs
+        if not runs:
+            continue
+
+        # Calculate original run text lengths
+        run_lengths = [len(r.text) for r in runs]
+        total_len = sum(run_lengths)
+
+        if total_len == 0:
+            runs[0].text = pair.rewritten
+            for run in runs[1:]:
                 run._r.getparent().remove(run._r)
+            continue
+
+        rewritten = pair.rewritten
+        rw_len = len(rewritten)
+
+        if len(runs) == 1:
+            runs[0].text = rewritten
+            continue
+
+        # Distribute rewritten text proportionally across runs
+        pos = 0
+        for j, run in enumerate(runs):
+            if j == len(runs) - 1:
+                run.text = rewritten[pos:]
+            else:
+                ratio = run_lengths[j] / total_len
+                chunk = max(1, round(ratio * rw_len))
+                remaining_runs = len(runs) - j - 1
+                chunk = min(chunk, rw_len - pos - remaining_runs)
+                if chunk < 1:
+                    chunk = 1
+                run.text = rewritten[pos:pos + chunk]
+                pos += chunk
 
 
 def _build_single_doc(doc: Document, results: list[RewritePair]):
