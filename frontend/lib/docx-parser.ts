@@ -1,7 +1,33 @@
 import mammoth from 'mammoth'
 
 export type ParagraphType = 'metadata' | 'content'
-export type MetadataLabel = '标题' | '摘要' | '关键词' | '正文'
+export type MetadataLabel = '标题' | '摘要' | '关键词' | '正文' | '封面'
+
+const COVER_KEYWORDS = [
+  '大学', '学院', 'University', 'College', 'Institute',
+  '学位论文', '毕业设计', '毕业论文', '硕士', '博士', '本科',
+  'Thesis', 'Dissertation', 'Bachelor', 'Master', 'Doctor',
+  '指导教师', '导师', 'Supervisor', 'Advisor',
+  '专业', '院系', '学号', 'Student ID', 'Department', 'Major',
+  '二〇', '作者', '姓名',
+]
+
+function detectCoverPage(paragraphs: ParsedParagraph[], maxCheck: number = 15): boolean {
+  const checkCount = Math.min(maxCheck, paragraphs.length)
+  if (checkCount < 3) return false
+
+  let hits = 0
+  for (let i = 0; i < checkCount; i++) {
+    const text = paragraphs[i].text
+    for (const kw of COVER_KEYWORDS) {
+      if (text.includes(kw)) {
+        hits++
+        break // one hit per paragraph max
+      }
+    }
+  }
+  return hits >= 2
+}
 
 export interface ParsedParagraph {
   text: string
@@ -126,6 +152,16 @@ export async function parseDocx(file: File): Promise<ParsedParagraph[]> {
       }),
     },
   )
+
+  // Post-process: detect cover page and mark cover paragraphs
+  if (detectCoverPage(collected)) {
+    for (let i = 0; i < Math.min(15, collected.length); i++) {
+      if (collected[i].type === 'content') {
+        collected[i].type = 'metadata'
+        collected[i].label = '封面'
+      }
+    }
+  }
 
   return collected
 }

@@ -6,6 +6,7 @@ const labelColors: Record<MetadataLabel, string> = {
   '摘要': 'bg-amber-50 text-amber-600',
   '关键词': 'bg-purple-50 text-purple-600',
   '正文': 'bg-brand-50 text-brand-600',
+  '封面': 'bg-sky-50 text-sky-600',
 }
 
 interface Props {
