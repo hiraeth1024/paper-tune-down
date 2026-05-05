@@ -78,8 +78,8 @@ function classifyParagraph(
     return { type: 'metadata', label: '正文', referencesStarted: true }
   }
 
-  // Empty / very short paragraphs are metadata
-  if (t.length < 5) {
+  // Short paragraphs (<20 chars) are metadata — covers title, author, department, etc.
+  if (t.length < 20) {
     return { type: 'metadata', label: '标题', referencesStarted: false }
   }
 
