@@ -2,7 +2,30 @@ import html
 import random
 import re
 
-ZWNJ = '‌'
+ZWNJ = '\u200c'
+
+# Characters near which ZWNJ should NOT be inserted
+_PUNCTUATION = '，。；：！？、""''）】》'
+
+
+def _is_cjk(ch: str) -> bool:
+    cp = ord(ch)
+    return (
+        0x4E00 <= cp <= 0x9FFF or
+        0x3400 <= cp <= 0x4DBF or
+        0x20000 <= cp <= 0x2A6DF or
+        0xF900 <= cp <= 0xFAFF
+    )
+
+
+def _should_insert(text: str, i: int) -> bool:
+    """Check whether ZWNJ should be inserted between text[i] and text[i+1]."""
+    return (
+        _is_cjk(text[i])
+        and _is_cjk(text[i + 1])
+        and text[i] not in _PUNCTUATION
+        and text[i + 1] not in _PUNCTUATION
+    )
 
 
 def inject_zwnj(text: str, prob: float = 0.6) -> tuple[str, int]:
@@ -17,30 +40,14 @@ def inject_zwnj(text: str, prob: float = 0.6) -> tuple[str, int]:
 
     for i in range(len(text) - 1):
         result.append(text[i])
-
-        curr_is_cjk = _is_cjk(text[i])
-        next_is_cjk = _is_cjk(text[i + 1])
-
-        if curr_is_cjk and next_is_cjk and random.random() < prob:
-            # Avoid inserting near punctuation
-            if text[i] not in '，。；：！？、""''）】》' and text[i + 1] not in '，。；：！？、""''）】》':
-                result.append(ZWNJ)
-                count += 1
+        if _should_insert(text, i) and random.random() < prob:
+            result.append(ZWNJ)
+            count += 1
 
     if text:
         result.append(text[-1])
 
     return ''.join(result), count
-
-
-def _is_cjk(ch: str) -> bool:
-    cp = ord(ch)
-    return (
-        0x4E00 <= cp <= 0x9FFF or
-        0x3400 <= cp <= 0x4DBF or
-        0x20000 <= cp <= 0x2A6DF or
-        0xF900 <= cp <= 0xFAFF
-    )
 
 
 def inject_zwnj_with_annotation(text: str, prob: float = 0.6) -> tuple[str, str, int]:
@@ -50,6 +57,9 @@ def inject_zwnj_with_annotation(text: str, prob: float = 0.6) -> tuple[str, str,
 
     Returns (processed_text_with_real_zwnj, annotated_html, insertion_count).
     """
+    mark_open = '<mark class="zwnj-spot">'
+    mark_close = '</mark>'
+
     result: list[str] = []
     annotated: list[str] = []
     count = 0
@@ -57,15 +67,10 @@ def inject_zwnj_with_annotation(text: str, prob: float = 0.6) -> tuple[str, str,
     for i in range(len(text) - 1):
         result.append(text[i])
         annotated.append(html.escape(text[i]))
-
-        curr_is_cjk = _is_cjk(text[i])
-        next_is_cjk = _is_cjk(text[i + 1])
-
-        if curr_is_cjk and next_is_cjk and random.random() < prob:
-            if text[i] not in '，。；：！？、""''）】》' and text[i + 1] not in '，。；：！？、""''）】》':
-                result.append(ZWNJ)
-                annotated.append('<mark class="zwnj-spot">‌</mark>')
-                count += 1
+        if _should_insert(text, i) and random.random() < prob:
+            result.append(ZWNJ)
+            annotated.append(f'{mark_open}{ZWNJ}{mark_close}')
+            count += 1
 
     if text:
         result.append(text[-1])
