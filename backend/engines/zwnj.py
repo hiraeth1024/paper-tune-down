@@ -1,3 +1,4 @@
+import html
 import random
 import re
 
@@ -55,7 +56,7 @@ def inject_zwnj_with_annotation(text: str, prob: float = 0.6) -> tuple[str, str,
 
     for i in range(len(text) - 1):
         result.append(text[i])
-        annotated.append(text[i])
+        annotated.append(html.escape(text[i]))
 
         curr_is_cjk = _is_cjk(text[i])
         next_is_cjk = _is_cjk(text[i + 1])
@@ -68,6 +69,6 @@ def inject_zwnj_with_annotation(text: str, prob: float = 0.6) -> tuple[str, str,
 
     if text:
         result.append(text[-1])
-        annotated.append(text[-1])
+        annotated.append(html.escape(text[-1]))
 
     return ''.join(result), ''.join(annotated), count

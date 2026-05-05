@@ -74,7 +74,7 @@ function classifyParagraph(
   }
 
   // Detect reference entry pattern: [1], [1-3], [1,2] followed by substantial content
-  if (/^\[\d+([\-–,]\d+)*\]/.test(t) && t.length > 50) {
+  if (/^\[\d+([–,]\d+)*\]/.test(t) && t.length > 20) {
     return { type: 'metadata', label: '正文', referencesStarted: true }
   }
 
@@ -156,10 +156,8 @@ export async function parseDocx(file: File): Promise<ParsedParagraph[]> {
   // Post-process: detect cover page and mark cover paragraphs
   if (detectCoverPage(collected)) {
     for (let i = 0; i < Math.min(15, collected.length); i++) {
-      if (collected[i].type === 'content') {
-        collected[i].type = 'metadata'
-        collected[i].label = '封面'
-      }
+      collected[i].type = 'metadata'
+      collected[i].label = '封面'
     }
   }
 
