@@ -17,6 +17,7 @@ class RewritePair(BaseModel):
     original: str
     rewritten: str
     changes: int
+    annotated: str | None = None
 
 
 class ProcessStats(BaseModel):

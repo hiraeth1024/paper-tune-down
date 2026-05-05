@@ -1,6 +1,6 @@
 from .rewrite import rewrite_text
 from .deai import deai_text
-from .zwnj import inject_zwnj
+from .zwnj import inject_zwnj, inject_zwnj_with_annotation
 
 
 def process_paragraph(text: str, mode: str, intensity: str,
@@ -14,6 +14,7 @@ def process_paragraph(text: str, mode: str, intensity: str,
         "total_replacements": 0,
         "zwnj_insertions": 0,
         "ai_patterns_removed": 0,
+        "annotated": text,  # defaults to original if no ZWNJ
     }
 
     if skip:
@@ -31,8 +32,12 @@ def process_paragraph(text: str, mode: str, intensity: str,
         result, stats["ai_patterns_removed"] = deai_text(text, intensity)
         result, stats["total_replacements"] = rewrite_text(result, intensity)
 
-    # ZWNJ as final pass in ALL modes, using user-provided probability directly
+    # ZWNJ as final pass in ALL modes
     if zwnj_prob > 0:
-        result, stats["zwnj_insertions"] = inject_zwnj(result, zwnj_prob)
+        result, annotated, count = inject_zwnj_with_annotation(result, zwnj_prob)
+        stats["zwnj_insertions"] = count
+        stats["annotated"] = annotated
+    else:
+        stats["annotated"] = result
 
     return result, stats
