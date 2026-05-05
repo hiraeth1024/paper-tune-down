@@ -25,6 +25,7 @@ export default function ProcessPage() {
   const [mode, setMode] = useState<Mode>('both')
   const [intensity, setIntensity] = useState<Intensity>('medium')
   const [zwnjProb, setZwnjProb] = useState(0.35)
+  const [manualSkip, setManualSkip] = useState<Set<number>>(new Set())
   const [processing, setProcessing] = useState(false)
   const [processResult, setProcessResult] = useState<ProcessResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -100,7 +101,7 @@ export default function ProcessPage() {
 
   async function handleStart() {
     if (!guardAuth()) return
-    const inputs = toParagraphInputs(parsedParagraphs)
+    const inputs = toParagraphInputs(parsedParagraphs, manualSkip)
     if (inputs.filter(p => !p.skip).length === 0) {
       showToast('没有可处理的正文段落')
       return
@@ -117,10 +118,20 @@ export default function ProcessPage() {
     }
   }
 
+  function handleToggleSkip(index: number) {
+    setManualSkip(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
+
   function handleReset() {
     setStep('upload')
     setFileName('')
     setParsedParagraphs([])
+    setManualSkip(new Set())
     setProcessResult(null)
     setOriginalFile(null)
   }
@@ -206,7 +217,7 @@ export default function ProcessPage() {
             onStart={handleStart}
           />
           <div className="lg:col-span-2">
-            <DocPreview paragraphs={parsedParagraphs} />
+            <DocPreview paragraphs={parsedParagraphs} manualSkip={manualSkip} onToggleSkip={handleToggleSkip} />
           </div>
         </div>
       )}
