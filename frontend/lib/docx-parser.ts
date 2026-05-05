@@ -174,10 +174,13 @@ export interface ParagraphInput {
   skip: boolean
 }
 
-export function toParagraphInputs(parsed: ParsedParagraph[]): ParagraphInput[] {
-  return parsed.map(p => ({
+export function toParagraphInputs(
+  parsed: ParsedParagraph[],
+  manualSkip?: Set<number>,
+): ParagraphInput[] {
+  return parsed.map((p, i) => ({
     text: p.text,
-    skip: p.type === 'metadata',
+    skip: p.type === 'metadata' || (manualSkip?.has(i) ?? false),
   }))
 }
 
