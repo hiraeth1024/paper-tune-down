@@ -74,6 +74,7 @@ export interface RewritePair {
   original: string
   rewritten: string
   changes: number
+  annotated?: string | null
 }
 
 export interface ProcessStats {

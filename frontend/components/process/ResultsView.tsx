@@ -130,7 +130,14 @@ export default function ResultsView({ results, stats, processing, paragraphCount
                     </div>
                     <div className="text-sm text-pg-text leading-relaxed border-l-2 border-accent-300 pl-3">
                       <span className="text-xs text-accent-500 font-medium block mb-1">改写</span>
-                      {p.rewritten}
+                      {p.annotated ? (
+                        <span
+                          className="[&_mark.zwnj-spot]:bg-yellow-300 [&_mark.zwnj-spot]:rounded [&_mark.zwnj-spot]:px-px [&_mark.zwnj-spot]:select-none [&_mark.zwnj-spot]:text-transparent"
+                          dangerouslySetInnerHTML={{ __html: p.annotated }}
+                        />
+                      ) : (
+                        p.rewritten
+                      )}
                     </div>
                   </div>
                 </div>
