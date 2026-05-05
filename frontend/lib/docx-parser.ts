@@ -29,35 +29,51 @@ function extractText(element: unknown): string {
   return ''
 }
 
-function classifyParagraph(text: string, styleName: string | null, index: number): { type: ParagraphType; label: MetadataLabel } {
+function classifyParagraph(
+  text: string,
+  styleName: string | null,
+  index: number,
+  referencesStarted: boolean,
+): { type: ParagraphType; label: MetadataLabel; referencesStarted: boolean } {
   const t = text.trim()
 
-  // Empty / very short paragraphs are metadata (kept for index alignment)
+  // Already in references section — everything after is metadata
+  if (referencesStarted) {
+    return { type: 'metadata', label: '正文', referencesStarted: true }
+  }
+
+  // Detect start of references section: "参考文献" heading
+  if (/^(参考文献|參考文獻|References|Bibliography)\s*$/i.test(t) && t.length < 30) {
+    return { type: 'metadata', label: '正文', referencesStarted: true }
+  }
+
+  // Detect reference entry pattern: [1], [1-3], [1,2] followed by substantial content
+  if (/^\[\d+([\-–,]\d+)*\]/.test(t) && t.length > 50) {
+    return { type: 'metadata', label: '正文', referencesStarted: true }
+  }
+
+  // Empty / very short paragraphs are metadata
   if (t.length < 5) {
-    return { type: 'metadata', label: '标题' }
+    return { type: 'metadata', label: '标题', referencesStarted: false }
   }
 
   // Tier 1: Style-based detection
   if (styleName) {
     const s = styleName.toLowerCase()
     if (s.includes('heading') || s.includes('title')) {
-      return { type: 'metadata', label: '标题' }
+      return { type: 'metadata', label: '标题', referencesStarted: false }
     }
   }
 
   // Tier 2: Heuristic fallback
-
-  // Abstract detection (Chinese & English)
   if ((t.includes('摘要') || /^Abstract\b/i.test(t)) && t.length < 500) {
-    return { type: 'metadata', label: '摘要' }
+    return { type: 'metadata', label: '摘要', referencesStarted: false }
   }
 
-  // Keywords
   if (/^(关键词|关键字|Keywords|KEYWORDS)\b/.test(t)) {
-    return { type: 'metadata', label: '关键词' }
+    return { type: 'metadata', label: '关键词', referencesStarted: false }
   }
 
-  // Numbered heading patterns (short text)
   if (t.length < 120) {
     const patterns = [
       /^第[一二三四五六七八九十\d]+[章节部分]/,
@@ -68,22 +84,22 @@ function classifyParagraph(text: string, styleName: string | null, index: number
     ]
     for (const pattern of patterns) {
       if (pattern.test(t)) {
-        return { type: 'metadata', label: '标题' }
+        return { type: 'metadata', label: '标题', referencesStarted: false }
       }
     }
   }
 
-  // First paragraph is often the title (short and early)
   if (index === 0 && t.length < 100) {
-    return { type: 'metadata', label: '标题' }
+    return { type: 'metadata', label: '标题', referencesStarted: false }
   }
 
-  return { type: 'content', label: '正文' }
+  return { type: 'content', label: '正文', referencesStarted: false }
 }
 
 export async function parseDocx(file: File): Promise<ParsedParagraph[]> {
   const arrayBuffer = await file.arrayBuffer()
   const collected: ParsedParagraph[] = []
+  let referencesStarted = false
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const transforms = (mammoth as any).transforms
@@ -97,7 +113,9 @@ export async function parseDocx(file: File): Promise<ParsedParagraph[]> {
           text,
           para.styleName ?? null,
           collected.length,
+          referencesStarted,
         )
+        referencesStarted = classification.referencesStarted
         collected.push({
           text,
           styleName: para.styleName ?? null,
