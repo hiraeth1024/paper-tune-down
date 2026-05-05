@@ -6,7 +6,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="border-t border-pg-border bg-white">
+    <section id="how-it-works">
       <div className="max-w-4xl mx-auto px-4 py-16 sm:py-20">
         <h2 className="text-2xl sm:text-3xl font-bold text-center text-pg-text mb-12 font-[family-name:var(--font-display)]">三步完成降重</h2>
         <div className="grid sm:grid-cols-3 gap-8">
