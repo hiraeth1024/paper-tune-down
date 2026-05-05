@@ -83,6 +83,11 @@ function classifyParagraph(
     return { type: 'metadata', label: '标题', referencesStarted: false }
   }
 
+  // Cover elements: contains "论文题目" or book-title marks 《》
+  if (t.includes('论文题目') || /《.+》/.test(t)) {
+    return { type: 'metadata', label: '封面', referencesStarted: false }
+  }
+
   // Tier 1: Style-based detection
   if (styleName) {
     const s = styleName.toLowerCase()
